@@ -9,7 +9,7 @@ export const PICK_DEADLINE = new Date('2026-06-11T18:00:00+04:00')
 export const ALLOWED_EMAIL_DOMAIN = '@focalpm.com'
 
 /** Office choices shown at signup ("Other…" reveals a free-text box). */
-export const OFFICES = ['UAE', 'India', 'Greece', 'Sri Lanka'] as const
+export const OFFICES = ['UAE', 'India', 'Sri Lanka'] as const
 
 export const APP_NAME = 'Focal World Cup 2026'
 
