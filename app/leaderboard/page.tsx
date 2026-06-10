@@ -12,10 +12,12 @@ export default async function LeaderboardPage() {
 
   return (
     <div>
-      <h1 className="text-center text-3xl font-normal tracking-tight text-white sm:text-4xl">Leaderboard</h1>
-      <p className="mt-3 text-center text-sm text-[#9AA7CC]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/trophy.png" alt="" aria-hidden className="animate-float mx-auto mb-6 h-28 w-auto" />
+      <h1 className="text-center text-3xl font-semibold tracking-tight text-white sm:text-4xl">Leaderboard</h1>
+      <p className="mt-3 text-center text-sm text-[#a1a1a6]">
         Updated daily as the tournament progresses ·{' '}
-        <a href="/how-to-play" className="text-[#C5CFE8] underline-offset-4 hover:underline">How to play</a>
+        <a href="/how-to-play" className="text-[#d2d2d7] underline-offset-4 hover:underline">How to play</a>
       </p>
       {error ? (
         <p className="mt-12 text-center text-red-400">Could not load the leaderboard. Please refresh.</p>

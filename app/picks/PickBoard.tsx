@@ -44,7 +44,7 @@ export default function PickBoard({ teams }: { teams: Team[] }) {
 
   return (
     <div className="mt-10 space-y-8 pb-28">
-      <p className="mx-auto max-w-2xl text-center text-sm leading-relaxed text-[#9AA7CC]">
+      <p className="mx-auto max-w-2xl text-center text-sm leading-relaxed text-[#a1a1a6]">
         Pick one team from each tier. The lower the tier, the bigger the multiplier — outsiders
         are worth the most. Then a Lucky Country is spun for you at random from Tiers B and C.
       </p>
@@ -53,11 +53,10 @@ export default function PickBoard({ teams }: { teams: Team[] }) {
         <section key={tier}>
           <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
             <h2 className="text-lg font-medium text-white">{title}</h2>
-            {/* Tier identity colors from the brand deck: A navy, B blue, C slate */}
-            <span className={`inline-flex items-center rounded-md px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white ${
-              tier === 'A' ? 'border border-[#3A4A6B] bg-[#0A2050]'
-              : tier === 'B' ? 'bg-[#1D4EC6]'
-              : 'bg-[#3A4A6B]'}`}>
+            <span className={`inline-flex items-center rounded-md px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider ${
+              tier === 'A' ? 'border border-[#3a3a3d] bg-[#161618] text-white'
+              : tier === 'B' ? 'bg-[#f5f5f7] text-black'
+              : 'bg-[#3a3a3d] text-white'}`}>
               {sub}
             </span>
           </div>
@@ -69,13 +68,13 @@ export default function PickBoard({ teams }: { teams: Team[] }) {
                   key={t.id} type="button" onClick={() => select(tier, t.id)}
                   className={`flex items-center justify-between rounded border px-3 py-2.5 text-left transition
                     ${selected
-                      ? 'border-[#1D4EC6] bg-[#0F2A63] text-white'
-                      : 'border-[#1d3464] bg-[#0A2050] text-[#C5CFE8] hover:border-[#3A4A6B]'}`}
+                      ? 'border-white bg-[#1d1d1f] text-white'
+                      : 'border-[#2a2a2d] bg-[#161618] text-[#d2d2d7] hover:border-[#3a3a3d]'}`}
                 >
                   <span className="flex items-center gap-2 text-sm">
                     <Flag code={t.code} /> {t.name}
                   </span>
-                  <span className="text-[10px] text-[#7585AE]">Group {t.group_letter}</span>
+                  <span className="text-[10px] text-[#86868b]">Group {t.group_letter}</span>
                 </button>
               )
             })}
@@ -84,25 +83,28 @@ export default function PickBoard({ teams }: { teams: Team[] }) {
       ))}
 
       {/* Floating "Your Squad" panel */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#1d3464] bg-[#011541]/95 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#2a2a2d] bg-black/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="mr-1 text-xs uppercase tracking-wider text-[#9AA7CC]">Your squad</span>
+            <span className="mr-1 text-xs uppercase tracking-wider text-[#a1a1a6]">Your squad</span>
             {SECTIONS.map(({ tier }) => {
               const t = chosen[tier] !== undefined ? byId.get(chosen[tier]!) : null
               return (
-                <span key={tier} className={`rounded border px-3 py-1 text-sm ${t ? 'border-[#3A4A6B] bg-[#0A2050] text-[#E7ECFA]' : 'border-dashed border-[#1d3464] text-[#7585AE]'}`}>
+                <span key={tier} className={`rounded border px-3 py-1 text-sm ${t ? 'border-[#3a3a3d] bg-[#161618] text-[#f5f5f7]' : 'border-dashed border-[#2a2a2d] text-[#86868b]'}`}>
                   {t ? <span className="flex items-center gap-2"><Flag code={t.code} size="sm" /> {t.name}</span> : `Tier ${tier} —`}
                 </span>
               )
             })}
-            <span className="rounded border border-dashed border-[#1d3464] px-3 py-1 text-sm text-[#7585AE]">
+            <span className="rounded border border-dashed border-[#2a2a2d] px-3 py-1 text-sm text-[#86868b]">
               Lucky — spun on submit
             </span>
           </div>
           <button
             type="button" disabled={!complete} onClick={() => setConfirming(true)}
-            className="rounded bg-[#1D4EC6] px-6 py-2.5 font-medium text-white transition hover:bg-[#173E9E] disabled:cursor-not-allowed disabled:opacity-30"
+            className={`rounded px-6 py-2.5 font-medium transition disabled:cursor-not-allowed disabled:opacity-30
+              ${complete
+                ? 'animate-glowpulse bg-[#E8B23A] text-black hover:bg-[#f0c155]'
+                : 'bg-[#f5f5f7] text-black hover:bg-white'}`}
           >
             Review squad
           </button>
@@ -112,43 +114,47 @@ export default function PickBoard({ teams }: { teams: Team[] }) {
       {/* Confirm modal */}
       {confirming && complete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-[#3A4A6B] bg-[#0A2050] p-6">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-[#3a3a3d] bg-[#161618] p-6">
             <h2 className="text-lg font-semibold text-white">Confirm your squad</h2>
             <div className="mt-4 space-y-2">
               {SECTIONS.map(({ tier, title }) => {
                 const t = byId.get(chosen[tier]!)!
                 return (
-                  <div key={tier} className="flex items-center justify-between rounded bg-[#0A2050] px-4 py-2.5">
+                  <div key={tier} className="flex items-center justify-between rounded bg-[#161618] px-4 py-2.5">
                     <span className="flex items-center gap-2.5 text-sm"><Flag code={t.code} /> {t.name}</span>
-                    <span className="text-xs text-[#9AA7CC]">{title} · ×{SLOT_MULTIPLIER[tier]}</span>
+                    <span className="text-xs text-[#a1a1a6]">{title} · ×{SLOT_MULTIPLIER[tier]}</span>
                   </div>
                 )
               })}
-              <div className="flex items-center justify-between rounded border border-dashed border-[#3A4A6B] bg-[#0A2050]/50 px-4 py-2.5">
-                <span className="text-sm text-[#C5CFE8]">Lucky Country</span>
-                <span className="text-xs text-[#9AA7CC]">random from Tiers B + C · ×{SLOT_MULTIPLIER.lucky}</span>
+              <div className="flex items-center justify-between rounded border border-dashed border-[#3a3a3d] bg-[#161618]/50 px-4 py-2.5">
+                <span className="text-sm text-[#d2d2d7]">Lucky Country</span>
+                <span className="text-xs text-[#a1a1a6]">random from Tiers B + C · ×{SLOT_MULTIPLIER.lucky}</span>
               </div>
             </div>
 
-            <div className="mt-5 rounded border border-[#1d3464] bg-[#011541] p-4 text-sm leading-relaxed text-[#C5CFE8]">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#C5CFE8]">How scoring works</h3>
+            <div className="mt-5 rounded border border-[#2a2a2d] bg-[#0a0a0a] p-4 text-sm leading-relaxed text-[#d2d2d7]">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#d2d2d7]">How scoring works</h3>
               <p>Each team earns group points (win {GROUP_WIN}, draw {GROUP_DRAW}) plus knockout points for the furthest round it reaches: R32 {KNOCKOUT_POINTS.LAST_32}, R16 {KNOCKOUT_POINTS.LAST_16}, QF {KNOCKOUT_POINTS.QUARTER_FINALS}, SF {KNOCKOUT_POINTS.SEMI_FINALS}, Final {KNOCKOUT_POINTS.FINAL}, Winner {KNOCKOUT_POINTS.WINNER}.</p>
               <p className="mt-2">That sum is multiplied by the slot: Favourite ×{SLOT_MULTIPLIER.A}, Contender ×{SLOT_MULTIPLIER.B}, Outsider ×{SLOT_MULTIPLIER.C}, Lucky ×{SLOT_MULTIPLIER.lucky}. Your Lucky Country also gets +{LUCKY_QF_BONUS} if it reaches the Quarter-finals and +{LUCKY_JACKPOT} if it wins the Cup.</p>
               <p className="mt-2">{PRIZE_TEXT}</p>
-              <p className="mt-3 font-medium text-[#E7ECFA]">Submitting spins your Lucky Country and locks all 4 picks for the whole tournament — one spin, no re-rolls.</p>
+              <p className="mt-3 font-medium text-[#f5f5f7]">Submitting spins your Lucky Country and locks all 4 picks for the whole tournament — one spin, no re-rolls.</p>
             </div>
 
             <form action="/api/picks" method="POST" className="mt-5">
               <input type="hidden" name="pickA" value={chosen.A} />
               <input type="hidden" name="pickB" value={chosen.B} />
               <input type="hidden" name="pickC" value={chosen.C} />
-              <button className="w-full rounded bg-[#1D4EC6] py-3 font-semibold text-white transition hover:bg-[#173E9E]">
+              <button className="w-full rounded bg-[#f5f5f7] py-3 font-semibold text-black transition hover:bg-white">
+                <span className="mr-2 inline-block align-middle">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/ball.png" alt="" style={{clipPath: "circle(47%)"}} className="animate-ballspin inline h-5 w-5" />
+                </span>
                 Spin my Lucky Country &amp; lock my squad
               </button>
             </form>
             <button
               type="button" onClick={() => setConfirming(false)}
-              className="mt-2 w-full rounded border border-[#3A4A6B] py-2.5 text-[#C5CFE8] transition hover:bg-[#0A2050]"
+              className="mt-2 w-full rounded border border-[#3a3a3d] py-2.5 text-[#d2d2d7] transition hover:bg-[#161618]"
             >
               Go back and change
             </button>

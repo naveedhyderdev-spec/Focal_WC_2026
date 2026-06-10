@@ -41,28 +41,41 @@ export default function LuckyWheel({ squad, pool }: { squad: SquadPick[]; pool: 
   return (
     <div className="mx-auto max-w-lg text-center">
       <h1 className="text-3xl font-normal tracking-tight text-white">Your Lucky Country</h1>
-      <p className="mt-2 text-sm text-[#9AA7CC]">Spun at random from Tiers B and C</p>
+      <p className="mt-2 text-sm text-[#a1a1a6]">Spun at random from Tiers B and C</p>
 
-      <div className={`mx-auto mt-10 flex h-44 w-44 flex-col items-center justify-center rounded-full border transition-all duration-500
-        ${done ? 'scale-110 border-[#1D4EC6] bg-[#0A2050] shadow-[0_0_50px_rgba(228,228,231,0.18)]' : 'border-[#3A4A6B] bg-[#0A2050]'}`}>
-        {display ? <Flag code={display.code} size="lg" /> : <span className="text-4xl text-[#3A4A6B]">·</span>}
-        <span className="mt-1 px-2 text-sm text-[#C5CFE8]">{display?.name ?? 'Spinning…'}</span>
+      <div className="relative mx-auto mt-10 h-52 w-52">
+        {/* the match ball spins like it's rolling in 3D while the draw runs */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/ball.png" alt="" style={{clipPath: "circle(47%)"}}
+          className={`absolute inset-0 h-full w-full transition-opacity duration-500
+            ${done ? 'opacity-0' : 'animate-ballspin-fast opacity-100'}`} />
+        {done && display && (
+          <div className="animate-pop absolute inset-0 flex flex-col items-center justify-center rounded-full border border-[#E8B23A]/70 bg-[#161618] shadow-[0_0_60px_rgba(232,178,58,0.35)]">
+            <Flag code={display.code} size="lg" />
+            <span className="mt-2 px-2 font-heading text-base font-semibold text-white">{display.name}</span>
+          </div>
+        )}
+        {!done && (
+          <span className="absolute -bottom-9 left-0 right-0 text-sm text-[#d2d2d7]">
+            {display?.name ?? 'Spinning…'}
+          </span>
+        )}
       </div>
 
       {done && (
-        <div className="mt-12">
+        <div className="animate-risein-1 mt-14">
           <h2 className="text-lg font-medium text-white">Squad complete — all 4 picks locked</h2>
           <div className="mt-5 space-y-2 text-left">
             {sorted.map(p => (
               <div key={p.slot}
-                className={`flex items-center justify-between rounded px-4 py-3 ${p.slot === 'lucky' ? 'border border-dashed border-[#3A4A6B] bg-[#0A2050]/50' : 'bg-[#0A2050]'}`}>
-                <span className="flex items-center gap-2.5"><Flag code={p.code} /> <span className="text-[#E7ECFA]">{p.name}</span></span>
-                <span className="text-xs text-[#9AA7CC]">{SLOT_LABEL[p.slot]} · ×{SLOT_MULTIPLIER[p.slot]}</span>
+                className={`flex items-center justify-between rounded px-4 py-3 ${p.slot === 'lucky' ? 'border border-dashed border-[#3a3a3d] bg-[#161618]/50' : 'bg-[#161618]'}`}>
+                <span className="flex items-center gap-2.5"><Flag code={p.code} /> <span className="text-[#f5f5f7]">{p.name}</span></span>
+                <span className="text-xs text-[#a1a1a6]">{SLOT_LABEL[p.slot]} · ×{SLOT_MULTIPLIER[p.slot]}</span>
               </div>
             ))}
           </div>
           <Link href="/leaderboard"
-            className="mt-10 inline-block rounded bg-[#1D4EC6] px-6 py-3 font-medium text-white transition hover:bg-[#173E9E]">
+            className="mt-10 inline-block rounded bg-[#f5f5f7] px-6 py-3 font-medium text-black transition hover:bg-white">
             Go to the leaderboard
           </Link>
         </div>

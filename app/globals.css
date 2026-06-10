@@ -1,15 +1,11 @@
 @import "tailwindcss";
 
-/* Focal brand tokens — see FOCAL-WEB-UI-BRAND-GUIDELINES.md */
+/* Apple-style black theme (James-approved departure from the navy brand
+   palette). Gold #E8B23A stays reserved for prizes/points/winners. */
 :root {
-  --focal-blue: #1D4EC6;
-  --focal-blue-700: #173E9E;
-  --focal-blue-100: #D5DBEC;
-  --focal-blue-50: #E7ECFA;
-  --focal-navy: #011541;        /* backgrounds only */
-  --focal-navy-800: #0A2050;    /* raised cards on navy */
-  --focal-navy-600: #3A4A6B;    /* muted panels / borders on navy */
-  --focal-gold: #E8B23A;        /* prizes, points, winner highlights ONLY */
+  --bg: #0a0a0a;
+  --card: #161618;
+  --gold: #E8B23A;
 }
 
 @theme inline {
@@ -17,12 +13,71 @@
 }
 
 body {
-  background: var(--focal-navy);
-  color: #ffffff;
+  background: var(--bg);
+  color: #f5f5f7;
   font-family: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Poppins for headings, buttons, nav and stats (brand typography) */
+/* Poppins for headings, buttons, nav and stats */
 h1, h2, h3, h4, button, .font-heading {
   font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ---------- game animations ---------- */
+
+/* trophy gently floating with a soft gold glow */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+  filter: drop-shadow(0 18px 42px rgba(232, 178, 58, 0.28));
+}
+
+/* ball rolling in 3D — spins on its axis while drifting */
+@keyframes ballspin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-ballspin { animation: ballspin 14s linear infinite; }
+.animate-ballspin-fast { animation: ballspin 0.8s linear infinite; }
+
+/* ball rolls across the hero once on page load */
+@keyframes ballroll {
+  0% { transform: translateX(-60vw) rotate(-540deg); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateX(0) rotate(0deg); opacity: 1; }
+}
+.animate-ballroll { animation: ballroll 1.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* reveal pop for the lucky country */
+@keyframes pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  70% { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-pop { animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* card entrance — content rises in like iOS */
+@keyframes risein {
+  from { transform: translateY(18px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-risein { animation: risein 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-risein-1 { animation: risein 0.6s 0.08s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-risein-2 { animation: risein 0.6s 0.16s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-risein-3 { animation: risein 0.6s 0.24s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* pulsing gold ring on the final CTA when the squad is complete */
+@keyframes glowpulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 178, 58, 0.55); }
+  50% { box-shadow: 0 0 0 12px rgba(232, 178, 58, 0); }
+}
+.animate-glowpulse { animation: glowpulse 1.6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float, .animate-ballspin, .animate-ballspin-fast, .animate-ballroll,
+  .animate-pop, .animate-risein, .animate-risein-1, .animate-risein-2,
+  .animate-risein-3, .animate-glowpulse { animation: none; }
 }

@@ -81,18 +81,18 @@ export default function LeaderboardTable({
   const prizes = useMemo(() => livePrizeHolders(rows), [rows])
 
   if (rows.length === 0)
-    return <p className="mt-12 text-center text-[#9AA7CC]">No picks submitted yet — be the first.</p>
+    return <p className="mt-12 text-center text-[#a1a1a6]">No picks submitted yet — be the first.</p>
 
   return (
     <div className="mt-10">
       {prizes.length > 0 && (
         <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
           {prizes.map(p => (
-            <div key={p.label} className="rounded border border-[#1d3464] bg-[#0A2050] px-4 py-3">
-              <div className="text-[10px] uppercase tracking-[0.2em] text-[#9AA7CC]">
+            <div key={p.label} className="rounded border border-[#2a2a2d] bg-[#161618] px-4 py-3">
+              <div className="text-[10px] uppercase tracking-[0.2em] text-[#a1a1a6]">
                 {p.label} · <span className="font-semibold text-[#E8B23A]">${p.amount}</span>
               </div>
-              <div className="mt-1 text-sm text-[#E7ECFA]">{p.name}</div>
+              <div className="mt-1 text-sm text-[#f5f5f7]">{p.name}</div>
             </div>
           ))}
         </div>
@@ -101,15 +101,15 @@ export default function LeaderboardTable({
       <div className="mb-5 flex flex-wrap justify-center gap-2">
         {offices.map(o => (
           <button key={o} onClick={() => setOffice(o)}
-            className={`rounded px-4 py-1.5 text-sm transition ${office === o ? 'bg-[#1D4EC6] font-medium text-white' : 'border border-[#1d3464] text-[#C5CFE8] hover:border-[#3A4A6B] hover:text-[#E7ECFA]'}`}>
+            className={`rounded px-4 py-1.5 text-sm transition ${office === o ? 'bg-[#f5f5f7] font-medium text-black' : 'border border-[#2a2a2d] text-[#d2d2d7] hover:border-[#3a3a3d] hover:text-[#f5f5f7]'}`}>
             {o}
           </button>
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-[#1d3464]">
+      <div className="overflow-x-auto rounded-lg border border-[#2a2a2d]">
         <table className="w-full min-w-[560px] text-sm">
-          <thead className="bg-[#0A2050] text-left text-xs uppercase tracking-wider text-[#9AA7CC]">
+          <thead className="bg-[#161618] text-left text-xs uppercase tracking-wider text-[#a1a1a6]">
             <tr>
               <th className="px-4 py-3 font-medium">#</th>
               <th className="px-4 py-3 font-medium">Name</th>
@@ -127,18 +127,18 @@ export default function LeaderboardTable({
                 <Fragment key={r.user_id}>
                   <tr
                     onClick={() => setOpen(isOpen ? null : r.user_id)}
-                    className={`cursor-pointer border-t border-[#1d3464]/80 transition hover:bg-[#0A2050]/60
-                      ${r.user_id === currentUserId ? 'bg-[#0A2050]' : i % 2 ? 'bg-[#071b4a]' : ''}`}
+                    className={`cursor-pointer border-t border-[#2a2a2d]/80 transition hover:bg-[#161618]/60
+                      ${r.user_id === currentUserId ? 'bg-[#161618]' : i % 2 ? 'bg-[#0d0d0e]' : ''}`}
                   >
-                    <td className="px-4 py-3 font-semibold text-[#C5CFE8]">{r.current_rank ?? i + 1}</td>
-                    <td className="px-4 py-3 text-[#E7ECFA]">
+                    <td className="px-4 py-3 font-semibold text-[#d2d2d7]">{r.current_rank ?? i + 1}</td>
+                    <td className="px-4 py-3 text-[#f5f5f7]">
                       {r.full_name}
-                      {r.user_id === currentUserId && <span className="ml-1.5 text-xs text-[#9AA7CC]">(you)</span>}
+                      {r.user_id === currentUserId && <span className="ml-1.5 text-xs text-[#a1a1a6]">(you)</span>}
                       {r.has_alive_pick && (
-                        <span className="ml-2 rounded border border-[#3A4A6B] px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-[#C5CFE8]">ALIVE</span>
+                        <span className="ml-2 rounded border border-[#3a3a3d] px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-[#d2d2d7]">ALIVE</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-[#9AA7CC]">{r.office_location}</td>
+                    <td className="px-4 py-3 text-[#a1a1a6]">{r.office_location}</td>
                     <td className="px-4 py-3">
                       <span className="flex gap-1.5 text-base">
                         {r.picks.map(p => (
@@ -146,28 +146,28 @@ export default function LeaderboardTable({
                         ))}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right text-[#C5CFE8]">{r.total_goals}</td>
+                    <td className="px-4 py-3 text-right text-[#d2d2d7]">{r.total_goals}</td>
                     <td className="px-4 py-3 text-right font-heading text-base font-semibold text-[#E8B23A]">{r.total_points}</td>
-                    <td className="px-2 py-3 text-center text-[#7585AE]">
+                    <td className="px-2 py-3 text-center text-[#86868b]">
                       <span className={`inline-block transition-transform ${isOpen ? 'rotate-180' : ''}`}>⌄</span>
                     </td>
                   </tr>
                   {isOpen && (
-                    <tr className="border-t border-[#1d3464]/50 bg-[#061840]">
+                    <tr className="border-t border-[#2a2a2d]/50 bg-[#101011]">
                       <td colSpan={7} className="px-4 py-3">
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                           {r.picks.map(p => (
                             <div key={p.slot}
-                              className={`rounded border px-3 py-2.5 ${p.alive ? 'border-[#3A4A6B] bg-[#0A2050]/60' : 'border-[#1d3464] bg-transparent opacity-50'}`}>
+                              className={`rounded border px-3 py-2.5 ${p.alive ? 'border-[#3a3a3d] bg-[#161618]/60' : 'border-[#2a2a2d] bg-transparent opacity-50'}`}>
                               <div className="flex items-center justify-between">
-                                <span className="flex items-center gap-2 text-sm text-[#E7ECFA]">
+                                <span className="flex items-center gap-2 text-sm text-[#f5f5f7]">
                                   <Flag code={p.code} /> {p.name}
                                 </span>
-                                <span className="text-[10px] uppercase tracking-wider text-[#9AA7CC]">
+                                <span className="text-[10px] uppercase tracking-wider text-[#a1a1a6]">
                                   {SLOT_LABEL[p.slot]} ×{SLOT_MULTIPLIER[p.slot]}
                                 </span>
                               </div>
-                              <div className="mt-1.5 text-xs text-[#9AA7CC]">
+                              <div className="mt-1.5 text-xs text-[#a1a1a6]">
                                 {p.is_champion ? 'Champion' : STAGE_LABEL[p.stage_reached] ?? p.stage_reached}
                                 {!p.alive && ' · out'} · {p.group_points} grp pts · {p.goals_for} goals · {p.won}-{p.draw}-{p.lost}
                               </div>
@@ -183,7 +183,7 @@ export default function LeaderboardTable({
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-center text-xs text-[#7585AE]">Click a row to see pick details</p>
+      <p className="mt-3 text-center text-xs text-[#86868b]">Click a row to see pick details</p>
     </div>
   )
 }

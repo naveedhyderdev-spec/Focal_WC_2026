@@ -35,13 +35,16 @@ export default async function PicksPage({
   return (
     <div>
       <div className="text-center">
-        <h1 className="text-3xl font-normal tracking-tight text-white sm:text-4xl">Build Your Squad</h1>
-        <p className="mt-3 text-sm text-[#9AA7CC]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/ball.png" alt="" aria-hidden style={{clipPath: "circle(47%)"}}
+          className="animate-ballroll mx-auto mb-5 h-20 w-20" />
+        <h1 className="animate-risein text-3xl font-semibold tracking-tight text-white sm:text-4xl">Build Your Squad</h1>
+        <p className="mt-3 text-sm text-[#a1a1a6]">
           One Favourite, one Contender, one Outsider — plus a random Lucky Country · picks lock at{' '}
-          <span className="text-[#C5CFE8]">{formatDeadline()}</span>
+          <span className="text-[#d2d2d7]">{formatDeadline()}</span>
         </p>
         <a href="/how-to-play"
-          className="mt-5 inline-block rounded-lg border border-[#5A6F9E] px-8 py-3 font-medium text-white transition hover:border-[#1D4EC6] hover:bg-[#0A2050]">
+          className="mt-5 inline-block rounded-lg border border-[#5a5a5e] px-8 py-3 font-medium text-white transition hover:border-[#86868b] hover:bg-[#161618]">
           How to Play — rules &amp; prizes
         </a>
       </div>
@@ -53,7 +56,7 @@ export default async function PicksPage({
       )}
 
       {isDeadlinePassed() ? (
-        <p className="mt-12 text-center text-[#9AA7CC]">
+        <p className="mt-12 text-center text-[#a1a1a6]">
           The deadline has passed. Head to the leaderboard to follow the competition.
         </p>
       ) : (
