@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Flag from '@/components/Flag'
 import { SLOT_LABEL, SLOT_MULTIPLIER, type Slot } from '@/lib/scoring'
 
 interface TeamLite { name: string; code: string; flag: string }
@@ -44,7 +45,7 @@ export default function LuckyWheel({ squad, pool }: { squad: SquadPick[]; pool: 
 
       <div className={`mx-auto mt-10 flex h-44 w-44 flex-col items-center justify-center rounded-full border transition-all duration-500
         ${done ? 'scale-110 border-[#1D4EC6] bg-[#0A2050] shadow-[0_0_50px_rgba(228,228,231,0.18)]' : 'border-[#3A4A6B] bg-[#0A2050]'}`}>
-        <span className="text-6xl">{display?.flag ?? '·'}</span>
+        {display ? <Flag code={display.code} size="lg" /> : <span className="text-4xl text-[#3A4A6B]">·</span>}
         <span className="mt-1 px-2 text-sm text-[#C5CFE8]">{display?.name ?? 'Spinning…'}</span>
       </div>
 
@@ -55,7 +56,7 @@ export default function LuckyWheel({ squad, pool }: { squad: SquadPick[]; pool: 
             {sorted.map(p => (
               <div key={p.slot}
                 className={`flex items-center justify-between rounded px-4 py-3 ${p.slot === 'lucky' ? 'border border-dashed border-[#3A4A6B] bg-[#0A2050]/50' : 'bg-[#0A2050]'}`}>
-                <span className="flex items-center gap-2.5"><span className="text-xl">{p.flag}</span> <span className="text-[#E7ECFA]">{p.name}</span></span>
+                <span className="flex items-center gap-2.5"><Flag code={p.code} /> <span className="text-[#E7ECFA]">{p.name}</span></span>
                 <span className="text-xs text-[#9AA7CC]">{SLOT_LABEL[p.slot]} · ×{SLOT_MULTIPLIER[p.slot]}</span>
               </div>
             ))}

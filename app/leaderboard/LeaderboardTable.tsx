@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment, useMemo, useState } from 'react'
+import Flag from '@/components/Flag'
 import { PRIZES, SLOT_LABEL, SLOT_MULTIPLIER, type Slot } from '@/lib/scoring'
 
 interface PickJson {
@@ -141,7 +142,7 @@ export default function LeaderboardTable({
                     <td className="px-4 py-3">
                       <span className="flex gap-1.5 text-base">
                         {r.picks.map(p => (
-                          <span key={p.slot} title={`${p.name} (${SLOT_LABEL[p.slot]})`} className={p.alive ? '' : 'opacity-30 grayscale'}>{p.flag}</span>
+                          <span key={p.slot} title={`${p.name} (${SLOT_LABEL[p.slot]})`} className={p.alive ? '' : 'opacity-30 grayscale'}><Flag code={p.code} /></span>
                         ))}
                       </span>
                     </td>
@@ -160,7 +161,7 @@ export default function LeaderboardTable({
                               className={`rounded border px-3 py-2.5 ${p.alive ? 'border-[#3A4A6B] bg-[#0A2050]/60' : 'border-[#1d3464] bg-transparent opacity-50'}`}>
                               <div className="flex items-center justify-between">
                                 <span className="flex items-center gap-2 text-sm text-[#E7ECFA]">
-                                  <span className="text-lg">{p.flag}</span> {p.name}
+                                  <Flag code={p.code} /> {p.name}
                                 </span>
                                 <span className="text-[10px] uppercase tracking-wider text-[#9AA7CC]">
                                   {SLOT_LABEL[p.slot]} ×{SLOT_MULTIPLIER[p.slot]}

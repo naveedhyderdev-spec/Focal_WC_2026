@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Flag from '@/components/Flag'
 import { SLOT_LABEL, SLOT_MULTIPLIER, type Slot } from '@/lib/scoring'
 import type { Team } from './PickBoard'
 
@@ -23,7 +24,7 @@ export default function LockedPicks({
             <div key={p.slot}
               className={`flex items-center justify-between rounded px-4 py-3 ${p.slot === 'lucky' ? 'border border-dashed border-[#3A4A6B] bg-[#0A2050]/50' : 'bg-[#0A2050]'}`}>
               <span className="flex items-center gap-2.5">
-                <span className="text-xl">{t?.flag}</span> <span className="text-[#E7ECFA]">{t?.name}</span>
+                {t && <Flag code={t.code} />} <span className="text-[#E7ECFA]">{t?.name}</span>
               </span>
               <span className="text-xs text-[#9AA7CC]">{SLOT_LABEL[p.slot]} · ×{SLOT_MULTIPLIER[p.slot]}</span>
             </div>

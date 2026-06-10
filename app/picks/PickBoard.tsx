@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Flag from '@/components/Flag'
 import {
   GROUP_WIN, GROUP_DRAW, KNOCKOUT_POINTS, SLOT_MULTIPLIER, LUCKY_QF_BONUS, LUCKY_JACKPOT,
   PRIZE_TEXT, type Tier,
@@ -72,7 +73,7 @@ export default function PickBoard({ teams }: { teams: Team[] }) {
                       : 'border-[#1d3464] bg-[#0A2050] text-[#C5CFE8] hover:border-[#3A4A6B]'}`}
                 >
                   <span className="flex items-center gap-2 text-sm">
-                    <span className="text-lg">{t.flag}</span> {t.name}
+                    <Flag code={t.code} /> {t.name}
                   </span>
                   <span className="text-[10px] text-[#7585AE]">Group {t.group_letter}</span>
                 </button>
@@ -91,7 +92,7 @@ export default function PickBoard({ teams }: { teams: Team[] }) {
               const t = chosen[tier] !== undefined ? byId.get(chosen[tier]!) : null
               return (
                 <span key={tier} className={`rounded border px-3 py-1 text-sm ${t ? 'border-[#3A4A6B] bg-[#0A2050] text-[#E7ECFA]' : 'border-dashed border-[#1d3464] text-[#7585AE]'}`}>
-                  {t ? `${t.flag} ${t.name}` : `Tier ${tier} —`}
+                  {t ? <span className="flex items-center gap-2"><Flag code={t.code} size="sm" /> {t.name}</span> : `Tier ${tier} —`}
                 </span>
               )
             })}
@@ -118,7 +119,7 @@ export default function PickBoard({ teams }: { teams: Team[] }) {
                 const t = byId.get(chosen[tier]!)!
                 return (
                   <div key={tier} className="flex items-center justify-between rounded bg-[#0A2050] px-4 py-2.5">
-                    <span className="flex items-center gap-2.5 text-sm"><span className="text-lg">{t.flag}</span> {t.name}</span>
+                    <span className="flex items-center gap-2.5 text-sm"><Flag code={t.code} /> {t.name}</span>
                     <span className="text-xs text-[#9AA7CC]">{title} · ×{SLOT_MULTIPLIER[tier]}</span>
                   </div>
                 )
