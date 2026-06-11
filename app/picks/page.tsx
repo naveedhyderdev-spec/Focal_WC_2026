@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createServerComponentClient } from '@/lib/supabase/server'
-import { formatDeadline, isDeadlinePassed } from '@/lib/config'
+import { formatDeadline, isDeadlinePassed, PICK_DEADLINE } from '@/lib/config'
+import Countdown from './Countdown'
 import PickBoard, { type Team } from './PickBoard'
 import LockedPicks from './LockedPicks'
 import type { Slot } from '@/lib/scoring'
@@ -43,6 +44,7 @@ export default async function PicksPage({
           One Favourite, one Contender, one Outsider — plus a random Lucky Country · picks lock at{' '}
           <span className="text-[#d2d2d7]">{formatDeadline()}</span>
         </p>
+        <Countdown deadlineIso={PICK_DEADLINE.toISOString()} />
         <a href="/how-to-play"
           className="mt-5 inline-block rounded-lg border border-[#5a5a5e] px-8 py-3 font-medium text-white transition hover:border-[#86868b] hover:bg-[#161618]">
           How to Play — rules &amp; prizes

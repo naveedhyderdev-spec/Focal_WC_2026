@@ -1,0 +1,19 @@
+name: Hourly score sync
+
+# Vercel Hobby only allows one cron per day, so GitHub Actions provides the
+# intraday refreshes. The endpoint is idempotent — it rebuilds the calculated
+# scores from raw picks + match results every run. 3 football-data API calls
+# per run, far inside the 10/min rate limit.
+on:
+  schedule:
+    - cron: '5 * * * *'   # every hour at :05
+  workflow_dispatch: {}    # manual "Run workflow" button
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger score sync
+        run: |
+          curl --fail-with-body -s -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://focal-wc-2026.vercel.app/api/cron/sync

@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextResponse, type NextRequest, after } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/route'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isDeadlinePassed } from '@/lib/config'
@@ -62,6 +62,16 @@ export async function POST(request: NextRequest) {
     const code = insertError.code === '23505' ? 'locked' : 'server'
     return applyCookies(NextResponse.redirect(`${origin}/picks?error=${code}`, 303))
   }
+
+  // Refresh scores/ranks in the background so the new player gets their
+  // leaderboard rank immediately instead of waiting for the next sync.
+  after(async () => {
+    try {
+      await fetch(`${origin}/api/cron/sync`, {
+        headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+      })
+    } catch { /* next scheduled sync will cover it */ }
+  })
 
   return applyCookies(NextResponse.redirect(`${origin}/reveal`, 303))
 }
