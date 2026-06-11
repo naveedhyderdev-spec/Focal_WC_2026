@@ -2,8 +2,8 @@
 // All tunable app settings live here.
 // ============================================================
 
-/** Picks lock at first kickoff (Dubai time). */
-export const PICK_DEADLINE = new Date('2026-06-11T18:00:00+04:00')
+/** Picks lock at 22:00 Dubai time on opening day (extended from 18:00 kickoff, per James, 11 June). */
+export const PICK_DEADLINE = new Date('2026-06-11T22:00:00+04:00')
 
 /** Only this email domain may register / log in… */
 export const ALLOWED_EMAIL_DOMAIN = '@focalpm.com'
