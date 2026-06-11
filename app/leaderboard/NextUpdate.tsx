@@ -2,18 +2,16 @@
 
 import { useEffect, useState } from 'react'
 
-// Scores refresh every hour at :05 (GitHub Actions schedule). This banner
+// Scores refresh every 5 minutes (cron-job.org schedule). This banner
 // is purely informational — it counts down to the next run.
 export default function NextUpdate() {
   const [left, setLeft] = useState<number | null>(null)
 
   useEffect(() => {
     const tick = () => {
-      const now = new Date()
-      const next = new Date(now)
-      next.setMinutes(5, 0, 0)
-      if (next <= now) next.setHours(next.getHours() + 1)
-      setLeft(next.getTime() - now.getTime())
+      const now = Date.now()
+      const next = Math.ceil(now / 300_000) * 300_000 // next 5-minute boundary
+      setLeft(next - now)
     }
     tick()
     const t = setInterval(tick, 1000)
@@ -28,7 +26,7 @@ export default function NextUpdate() {
 
   return (
     <p className="mt-2 text-center text-xs text-[#86868b]">
-      Scores update every hour · next update in{' '}
+      Scores update every 5 minutes · next update in{' '}
       <span className="font-heading font-semibold tabular-nums text-[#d2d2d7]">{pad(m)}m {pad(s)}s</span>
     </p>
   )
