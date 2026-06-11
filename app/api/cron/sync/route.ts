@@ -91,7 +91,9 @@ export async function GET(request: NextRequest) {
           const o = h && a ? overlay.get(`${h}|${a}`) : undefined
           if (!o) return m
           const fdRank = m.status === 'FINISHED' ? 2 : (m.status === 'IN_PLAY' || m.status === 'PAUSED') ? 1 : 0
-          if ((OVERLAY_RANK[o.state] ?? 0) <= fdRank) return m // fd is current — keep it
+          const fdHasScore = m.score.fullTime.home !== null && m.score.fullTime.away !== null
+          // fd wins only if it's at least as advanced AND actually has a score
+          if ((OVERLAY_RANK[o.state] ?? 0) <= fdRank && fdHasScore) return m
           const finished = o.state === 'post'
           return {
             ...m,
@@ -118,13 +120,30 @@ export async function GET(request: NextRequest) {
     const existing = new Map((existingRows ?? []).map(r => [r.fd_match_id, r]))
     matches = matches.map(m => {
       const prev = existing.get(m.id)
-      if (prev && (RANK[m.status] ?? 0) < (RANK[prev.status] ?? 0)) {
+      if (!prev) return m
+      // status regression → keep our last-known state entirely
+      if ((RANK[m.status] ?? 0) < (RANK[prev.status] ?? 0)) {
         return {
           ...m,
           status: prev.status,
           score: {
             winner: prev.winner,
             fullTime: { home: prev.home_score, away: prev.away_score },
+          },
+        }
+      }
+      // status advanced but score went missing (e.g. FINISHED with nulls
+      // while we held a real live score) → keep our last-known score
+      if (m.score.fullTime.home === null && m.score.fullTime.away === null
+          && prev.home_score !== null && prev.away_score !== null) {
+        const h = prev.home_score, a = prev.away_score
+        return {
+          ...m,
+          score: {
+            winner: m.status === 'FINISHED'
+              ? (h > a ? 'HOME_TEAM' : a > h ? 'AWAY_TEAM' : 'DRAW')
+              : prev.winner,
+            fullTime: { home: h, away: a },
           },
         }
       }

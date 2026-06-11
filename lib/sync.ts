@@ -68,6 +68,9 @@ export function aggregateTeams(matches: FdMatch[], allCodes: string[]): Map<stri
     // results (W-D-L, group points) only count once the match is FINISHED.
     const isLive = m.status === 'IN_PLAY' || m.status === 'PAUSED'
     if (m.status !== 'FINISHED' && !isLive) continue
+    // a FINISHED/live match with no score is feed garbage — never count it
+    // as a 0-0; skip until a source provides the real numbers
+    if (m.score.fullTime.home === null || m.score.fullTime.away === null) continue
     const hs = m.score.fullTime.home ?? 0
     const as = m.score.fullTime.away ?? 0
     const ht = home ? stats.get(home) : undefined

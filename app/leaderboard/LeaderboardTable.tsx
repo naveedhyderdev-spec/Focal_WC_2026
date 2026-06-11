@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, useState } from 'react'
 import Flag from '@/components/Flag'
-import { PRIZES, SLOT_LABEL, SLOT_MULTIPLIER, type Slot } from '@/lib/scoring'
+import { PRIZES, SHOW_PRIZE_STRIP, SLOT_LABEL, SLOT_MULTIPLIER, type Slot } from '@/lib/scoring'
 
 interface PickJson {
   slot: Slot
@@ -43,7 +43,7 @@ const STAGE_LABEL: Record<string, string> = {
 // largest prize down, skipping anyone already awarded. Snapshot prizes
 // (Group Stage Leader, Biggest Climber) activate after the group stage.
 function livePrizeHolders(rows: LeaderboardRow[]): { label: string; amount: number; name: string }[] {
-  if (rows.length === 0) return []
+  if (!SHOW_PRIZE_STRIP || rows.length === 0) return []
   // Before any match is played everyone is on 0 — naming "winners" would be
   // meaningless, so hide the prize strip until real points exist.
   if (!rows.some(r => r.total_points > 0)) return []

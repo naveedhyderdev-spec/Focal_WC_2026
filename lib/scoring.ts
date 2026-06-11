@@ -46,6 +46,11 @@ export const PRIZES: { key: string; label: string; amount: number }[] = [
   { key: 'wooden_spoon', label: 'Wooden Spoon', amount: 75 },
 ]
 
+/** Show the live prize-holders strip on the leaderboard. Off for the early
+ *  group stage (everyone's tied — naming "winners" is noise); flip to true
+ *  once the table spreads out, e.g. late group stage. */
+export const SHOW_PRIZE_STRIP = false
+
 export const PRIZE_TEXT =
   'Five prizes share the $1,000 pot: Overall Champion, Group Stage Leader, Giant Killer ' +
   '(most points from your Outsider + Lucky Country), Biggest Climber after the group stage, ' +
