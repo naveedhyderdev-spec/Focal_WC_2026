@@ -63,7 +63,9 @@ export default function MatchStrip({
               </span>
               <span className={`ml-1 text-[10px] font-bold uppercase tracking-wider
                 ${live ? 'animate-pulse text-[#E8B23A]' : done ? 'text-[#86868b]' : 'text-[#a1a1a6]'}`}>
-                {live ? (m.status === 'PAUSED' ? 'HT' : `● ${estMinute(m.utc_date)}`) : done ? 'FT' : kickoff(m.utc_date)}
+                {live
+                  ? (() => { const t = estMinute(m.utc_date); return t === 'HT' ? 'HT' : `● ${t}` })()
+                  : done ? 'FT' : kickoff(m.utc_date)}
               </span>
             </div>
           )
