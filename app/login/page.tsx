@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import DeadlineBanner from '@/components/DeadlineBanner'
+import { PICK_DEADLINE } from '@/lib/config'
 
 const ERRORS: Record<string, string> = {
   domain: 'Please use your @focalpm.com email address.',
@@ -24,6 +26,7 @@ export default async function LoginPage({
       <p className="animate-risein-1 mt-3 text-center text-sm text-[#a1a1a6]">
         Already joined? Just enter your <span className="text-[#f5f5f7]">@focalpm.com</span> email — no password needed
       </p>
+      <DeadlineBanner deadlineIso={PICK_DEADLINE.toISOString()} />
 
       {error && ERRORS[error] && (
         <div className="mt-6 rounded border border-red-900/60 bg-red-950/30 px-4 py-3 text-sm text-red-300">

@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import OfficeSelect from './OfficeSelect'
+import DeadlineBanner from '@/components/DeadlineBanner'
+import { PICK_DEADLINE } from '@/lib/config'
 
 const ERRORS: Record<string, string> = {
   domain: 'Please use your @focalpm.com email address.',
@@ -22,6 +24,7 @@ export default async function SignupPage({
       <p className="text-center text-xs font-bold uppercase tracking-[0.3em] text-[#86868b]">Focal Middle East</p>
       <h1 className="mt-2 text-center text-3xl font-normal tracking-tight text-white">Join the competition</h1>
       <p className="mt-3 text-center text-sm text-[#a1a1a6]">Build a squad of four countries. Watch them climb. Win cash.</p>
+      <DeadlineBanner deadlineIso={PICK_DEADLINE.toISOString()} />
 
       {error && ERRORS[error] && (
         <div className="mt-6 rounded border border-[#5a5a5e] bg-[#1d1d1f]/60 px-4 py-3 text-sm text-[#f5f5f7]">

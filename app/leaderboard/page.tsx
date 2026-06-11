@@ -1,6 +1,8 @@
 import { createServerComponentClient } from '@/lib/supabase/server'
 import LeaderboardTable, { type LeaderboardRow } from './LeaderboardTable'
 import NextUpdate from './NextUpdate'
+import DeadlineBanner from '@/components/DeadlineBanner'
+import { PICK_DEADLINE } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,6 +23,7 @@ export default async function LeaderboardPage() {
         <a href="/how-to-play" className="text-[#d2d2d7] underline-offset-4 hover:underline">How to play</a>
       </p>
       <NextUpdate />
+      <DeadlineBanner deadlineIso={PICK_DEADLINE.toISOString()} />
       {error ? (
         <p className="mt-12 text-center text-red-400">Could not load the leaderboard. Please refresh.</p>
       ) : (
