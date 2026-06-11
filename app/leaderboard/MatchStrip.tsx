@@ -25,18 +25,6 @@ export default function MatchStrip({
   const kickoff = (iso: string | null) =>
     iso ? new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(iso)) : ''
 
-  // The free API tier has no referee clock, so estimate from kickoff time:
-  // first half ≈ elapsed, second half ≈ elapsed minus the 15-min break.
-  const estMinute = (iso: string | null) => {
-    if (!iso) return '● LIVE'
-    const elapsed = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000)
-    if (elapsed < 1) return "~1'"
-    if (elapsed <= 45) return `~${elapsed}'`
-    if (elapsed <= 60) return "HT"
-    const second = Math.min(elapsed - 15, 90)
-    return second >= 90 ? "90'+" : `~${second}'`
-  }
-
   return (
     <div className="mt-8">
       <h2 className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.25em] text-[#86868b]">
@@ -44,8 +32,13 @@ export default function MatchStrip({
       </h2>
       <div className="flex flex-wrap justify-center gap-2">
         {matches.map(m => {
-          const live = m.status === 'IN_PLAY' || m.status === 'PAUSED'
-          const done = m.status === 'FINISHED'
+          // The feed's live status is unreliable, so LIVE is decided by the
+          // official kickoff time (always correct) within a realistic match
+          // window; FINISHED from the feed always wins.
+          const ko = m.utc_date ? new Date(m.utc_date).getTime() : null
+          const inWindow = ko !== null && Date.now() >= ko && Date.now() <= ko + 130 * 60_000
+          const done = m.status === 'FINISHED' || (ko !== null && Date.now() > ko + 130 * 60_000)
+          const live = !done && inWindow
           return (
             <div key={m.fd_match_id}
               className={`flex items-center gap-3 rounded-lg border px-4 py-2.5 text-sm
@@ -63,9 +56,7 @@ export default function MatchStrip({
               </span>
               <span className={`ml-1 text-[10px] font-bold uppercase tracking-wider
                 ${live ? 'animate-pulse text-[#E8B23A]' : done ? 'text-[#86868b]' : 'text-[#a1a1a6]'}`}>
-                {live
-                  ? (() => { const t = estMinute(m.utc_date); return t === 'HT' ? 'HT' : `● ${t}` })()
-                  : done ? 'FT' : kickoff(m.utc_date)}
+                {live ? '● LIVE' : done ? 'FT' : kickoff(m.utc_date)}
               </span>
             </div>
           )

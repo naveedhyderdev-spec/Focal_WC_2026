@@ -31,8 +31,16 @@ export default async function LeaderboardPage() {
   ])
 
   const names = Object.fromEntries((teams ?? []).map(t => [t.code, t.name]))
+  // LIVE = official kickoff has passed and we're inside the realistic match
+  // window — same clock-based rule as the match strip (the feed's live
+  // status is unreliable; FINISHED from the feed always ends it early).
+  const now = Date.now()
   const liveCodes = (todayMatches ?? [])
-    .filter(m => m.status === 'IN_PLAY' || m.status === 'PAUSED')
+    .filter(m => {
+      if (m.status === 'FINISHED' || !m.utc_date) return false
+      const ko = new Date(m.utc_date).getTime()
+      return now >= ko && now <= ko + 130 * 60_000
+    })
     .flatMap(m => [m.home_team_code, m.away_team_code])
     .filter((c): c is string => !!c)
 
