@@ -36,8 +36,8 @@ export default async function SignupPage({
         </div>
         <div>
           <label htmlFor="email" className="mb-1.5 block text-xs uppercase tracking-wider text-[#a1a1a6]">Company email</label>
-          <input id="email" name="email" type="email" required placeholder="you@focalpm.com" pattern=".*@focalpm\.com$"
-            title="Must be an @focalpm.com address" defaultValue={email ?? ''} className={inputCls} />
+          <input id="email" name="email" type="email" required placeholder="you@focalpm.com"
+            title="Use your @focalpm.com address" defaultValue={email ?? ''} className={inputCls} />
         </div>
         <OfficeSelect />
         <button className="w-full rounded bg-[#f5f5f7] py-2.5 font-semibold text-black transition hover:bg-white">

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/route'
-import { ALLOWED_EMAIL_DOMAIN } from '@/lib/config'
+import { isAllowedEmail } from '@/lib/config'
 import { derivedPassword } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   const officeLocation = office === 'Other' ? officeOther : office
   const origin = new URL(request.url).origin
 
-  if (!email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN))
+  if (!isAllowedEmail(email))
     return NextResponse.redirect(`${origin}/signup?error=domain`, 303)
   if (!fullName || !officeLocation)
     return NextResponse.redirect(`${origin}/signup?error=missing`, 303)

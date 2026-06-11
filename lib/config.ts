@@ -5,8 +5,16 @@
 /** Picks lock at first kickoff (Dubai time). */
 export const PICK_DEADLINE = new Date('2026-06-11T18:00:00+04:00')
 
-/** Only this email domain may register / log in. */
+/** Only this email domain may register / log in… */
 export const ALLOWED_EMAIL_DOMAIN = '@focalpm.com'
+
+/** …except these specific guests (James-approved). Lowercase. */
+export const ALLOWED_EMAIL_EXCEPTIONS = ['francofrederik@gmail.com']
+
+export function isAllowedEmail(email: string): boolean {
+  const e = email.trim().toLowerCase()
+  return e.endsWith(ALLOWED_EMAIL_DOMAIN) || ALLOWED_EMAIL_EXCEPTIONS.includes(e)
+}
 
 /** Office choices shown at signup ("Other…" reveals a free-text box). */
 export const OFFICES = ['UAE', 'India', 'Sri Lanka'] as const
