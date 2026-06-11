@@ -3,6 +3,19 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateTeams, computeScores, normalizeCode, type FdMatch } from '@/lib/sync'
 
 const FD_BASE = 'https://api.football-data.org/v4'
+const ESPN_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard'
+
+// ESPN team names that differ from ours (most match exactly)
+const ESPN_NAME_ALIASES: Record<string, string> = {
+  'Turkey': 'Türkiye',
+  'Cape Verde Islands': 'Cabo Verde',
+  'Cape Verde': 'Cabo Verde',
+  "Côte d'Ivoire": 'Ivory Coast',
+  'Democratic Republic of the Congo': 'DR Congo',
+  'USA': 'United States',
+  'Czech Republic': 'Czechia',
+  'Bosnia & Herzegovina': 'Bosnia and Herzegovina',
+}
 
 // Daily sync (Vercel Cron, midnight Dubai). Protected by CRON_SECRET.
 // 3 football-data calls (teams, matches, standings) — well under 10/min.
@@ -36,6 +49,63 @@ export async function GET(request: NextRequest) {
     // 2. Upsert all matches
     const fdMatches = await fd('/competitions/WC/matches')
     let matches: FdMatch[] = fdMatches.matches ?? []
+
+    // 2a. ESPN live overlay — football-data's free live feed can freeze for
+    // an entire match. ESPN's public scoreboard is fast; where it is AHEAD
+    // (live or finished while fd still says scheduled), its state wins.
+    // Non-fatal: any failure here just means we rely on fd alone.
+    try {
+      const nameToCode = new Map(ourTeams.map(t => [t.code, t.code]))
+      const { data: teamNames } = await admin.from('teams').select('code, name')
+      for (const t of teamNames ?? []) nameToCode.set(t.name, t.code)
+      for (const [espn, ours] of Object.entries(ESPN_NAME_ALIASES)) {
+        const code = (teamNames ?? []).find(t => t.name === ours)?.code
+        if (code) nameToCode.set(espn, code)
+      }
+
+      const espnRes = await fetch(ESPN_SCOREBOARD, { cache: 'no-store' })
+      if (espnRes.ok) {
+        const espn = await espnRes.json()
+        // key: "HOME|AWAY" codes → { state, home, away }
+        const overlay = new Map<string, { state: string; home: number; away: number }>()
+        for (const e of espn.events ?? []) {
+          const comp = e.competitions?.[0]
+          const state = e.status?.type?.state // pre | in | post
+          if (!comp || state === 'pre') continue
+          let homeCode: string | undefined, awayCode: string | undefined
+          let homeScore = 0, awayScore = 0
+          for (const c of comp.competitors ?? []) {
+            const code = nameToCode.get(c.team?.displayName)
+            if (!code) continue
+            if (c.homeAway === 'home') { homeCode = code; homeScore = Number(c.score ?? 0) }
+            else { awayCode = code; awayScore = Number(c.score ?? 0) }
+          }
+          if (homeCode && awayCode)
+            overlay.set(`${homeCode}|${awayCode}`, { state, home: homeScore, away: awayScore })
+        }
+
+        const OVERLAY_RANK: Record<string, number> = { in: 1, post: 2 }
+        matches = matches.map(m => {
+          const h = normalizeCode(m.homeTeam.tla)
+          const a = normalizeCode(m.awayTeam.tla)
+          const o = h && a ? overlay.get(`${h}|${a}`) : undefined
+          if (!o) return m
+          const fdRank = m.status === 'FINISHED' ? 2 : (m.status === 'IN_PLAY' || m.status === 'PAUSED') ? 1 : 0
+          if ((OVERLAY_RANK[o.state] ?? 0) <= fdRank) return m // fd is current — keep it
+          const finished = o.state === 'post'
+          return {
+            ...m,
+            status: finished ? 'FINISHED' : 'IN_PLAY',
+            score: {
+              winner: finished ? (o.home > o.away ? 'HOME_TEAM' : o.away > o.home ? 'AWAY_TEAM' : 'DRAW') : null,
+              fullTime: { home: o.home, away: o.away },
+            },
+          }
+        })
+      }
+    } catch (e) {
+      console.error('ESPN overlay skipped:', e)
+    }
 
     // Guard against feed glitches: football-data occasionally reverts a
     // live/finished match to TIMED with null scores for a few minutes.
