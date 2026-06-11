@@ -64,23 +64,32 @@ export function aggregateTeams(matches: FdMatch[], allCodes: string[]): Map<stri
       if (t && stageIdx(m.stage) > stageIdx(t.stage_reached)) t.stage_reached = m.stage
     }
 
-    if (m.status !== 'FINISHED') continue
+    // Goals count LIVE (in-play/paused) so the board moves during matches;
+    // results (W-D-L, group points) only count once the match is FINISHED.
+    const isLive = m.status === 'IN_PLAY' || m.status === 'PAUSED'
+    if (m.status !== 'FINISHED' && !isLive) continue
     const hs = m.score.fullTime.home ?? 0
     const as = m.score.fullTime.away ?? 0
     const ht = home ? stats.get(home) : undefined
     const at = away ? stats.get(away) : undefined
     const isGroup = m.stage === 'GROUP_STAGE'
     if (ht) {
-      ht.games_played++; ht.goals_for += hs; ht.goals_against += as
-      if (hs > as) { ht.won++; if (isGroup) ht.group_points += GROUP_WIN }
-      else if (hs < as) ht.lost++
-      else { ht.draw++; if (isGroup) ht.group_points += GROUP_DRAW }
+      ht.goals_for += hs; ht.goals_against += as
+      if (m.status === 'FINISHED') {
+        ht.games_played++
+        if (hs > as) { ht.won++; if (isGroup) ht.group_points += GROUP_WIN }
+        else if (hs < as) ht.lost++
+        else { ht.draw++; if (isGroup) ht.group_points += GROUP_DRAW }
+      }
     }
     if (at) {
-      at.games_played++; at.goals_for += as; at.goals_against += hs
-      if (as > hs) { at.won++; if (isGroup) at.group_points += GROUP_WIN }
-      else if (as < hs) at.lost++
-      else { at.draw++; if (isGroup) at.group_points += GROUP_DRAW }
+      at.goals_for += as; at.goals_against += hs
+      if (m.status === 'FINISHED') {
+        at.games_played++
+        if (as > hs) { at.won++; if (isGroup) at.group_points += GROUP_WIN }
+        else if (as < hs) at.lost++
+        else { at.draw++; if (isGroup) at.group_points += GROUP_DRAW }
+      }
     }
 
     // Champion = winner of the finished Final (knockouts have no DRAW winner)

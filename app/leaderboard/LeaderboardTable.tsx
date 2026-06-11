@@ -66,11 +66,13 @@ function livePrizeHolders(rows: LeaderboardRow[]): { label: string; amount: numb
 }
 
 export default function LeaderboardTable({
-  rows, currentUserId,
+  rows, currentUserId, liveCodes = [],
 }: {
   rows: LeaderboardRow[]
   currentUserId: string | null
+  liveCodes?: string[]
 }) {
+  const liveSet = new Set(liveCodes)
   const offices = useMemo(
     () => ['All', ...[...new Set(rows.map(r => r.office_location).filter(Boolean))].sort()],
     [rows],
@@ -136,7 +138,9 @@ export default function LeaderboardTable({
                     <td className="px-4 py-3 text-[#f5f5f7]">
                       {r.full_name}
                       {r.user_id === currentUserId && <span className="ml-1.5 text-xs text-[#a1a1a6]">(you)</span>}
-                      {r.has_alive_pick && (
+                      {r.picks.some(p => liveSet.has(p.code)) ? (
+                        <span className="ml-2 animate-pulse rounded border border-[#E8B23A]/70 bg-[#E8B23A]/10 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-[#E8B23A]">● LIVE</span>
+                      ) : r.has_alive_pick && (
                         <span className="ml-2 rounded border border-[#3a3a3d] px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-[#d2d2d7]">ALIVE</span>
                       )}
                     </td>
@@ -144,7 +148,10 @@ export default function LeaderboardTable({
                     <td className="px-4 py-3">
                       <span className="flex gap-1.5 text-base">
                         {r.picks.map(p => (
-                          <span key={p.slot} title={`${p.name} (${SLOT_LABEL[p.slot]})`} className={p.alive ? '' : 'opacity-30 grayscale'}><Flag code={p.code} /></span>
+                          <span key={p.slot} title={`${p.name} (${SLOT_LABEL[p.slot]})${liveSet.has(p.code) ? ' — playing now' : ''}`}
+                            className={`${p.alive ? '' : 'opacity-30 grayscale'} ${liveSet.has(p.code) ? 'animate-glowpulse rounded-sm' : ''}`}>
+                            <Flag code={p.code} />
+                          </span>
                         ))}
                       </span>
                     </td>

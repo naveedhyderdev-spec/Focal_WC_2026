@@ -2,19 +2,41 @@ import { createServerComponentClient } from '@/lib/supabase/server'
 import LeaderboardTable, { type LeaderboardRow } from './LeaderboardTable'
 import NextUpdate from './NextUpdate'
 import DeadlineBanner from '@/components/DeadlineBanner'
+import MatchStrip, { type MatchLite } from './MatchStrip'
+import AutoRefresh from './AutoRefresh'
 import { PICK_DEADLINE } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
 
+/** Start/end of "today" in Dubai time, as ISO instants. */
+function dubaiDayBounds(): { start: string; end: string } {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date()) // YYYY-MM-DD
+  const start = new Date(`${today}T00:00:00+04:00`)
+  const end = new Date(start.getTime() + 24 * 3600 * 1000)
+  return { start: start.toISOString(), end: end.toISOString() }
+}
+
 export default async function LeaderboardPage() {
   const supabase = await createServerComponentClient()
-  const [{ data: { user } }, { data: rows, error }] = await Promise.all([
+  const { start, end } = dubaiDayBounds()
+  const [{ data: { user } }, { data: rows, error }, { data: todayMatches }, { data: teams }] = await Promise.all([
     supabase.auth.getUser(),
     supabase.rpc('get_leaderboard'),
+    supabase.from('matches')
+      .select('fd_match_id, status, utc_date, home_team_code, away_team_code, home_score, away_score')
+      .gte('utc_date', start).lt('utc_date', end).order('utc_date'),
+    supabase.from('teams').select('code, name'),
   ])
+
+  const names = Object.fromEntries((teams ?? []).map(t => [t.code, t.name]))
+  const liveCodes = (todayMatches ?? [])
+    .filter(m => m.status === 'IN_PLAY' || m.status === 'PAUSED')
+    .flatMap(m => [m.home_team_code, m.away_team_code])
+    .filter((c): c is string => !!c)
 
   return (
     <div>
+      <AutoRefresh />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/trophy.png" alt="" aria-hidden className="animate-float mx-auto mb-6 h-28 w-auto" />
       <h1 className="text-center text-3xl font-semibold tracking-tight text-white sm:text-4xl">Leaderboard</h1>
@@ -24,10 +46,11 @@ export default async function LeaderboardPage() {
       </p>
       <NextUpdate />
       <DeadlineBanner deadlineIso={PICK_DEADLINE.toISOString()} />
+      <MatchStrip matches={(todayMatches ?? []) as MatchLite[]} names={names} />
       {error ? (
         <p className="mt-12 text-center text-red-400">Could not load the leaderboard. Please refresh.</p>
       ) : (
-        <LeaderboardTable rows={(rows ?? []) as LeaderboardRow[]} currentUserId={user?.id ?? null} />
+        <LeaderboardTable rows={(rows ?? []) as LeaderboardRow[]} currentUserId={user?.id ?? null} liveCodes={liveCodes} />
       )}
     </div>
   )
