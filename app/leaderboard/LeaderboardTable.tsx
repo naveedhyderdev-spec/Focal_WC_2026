@@ -130,7 +130,7 @@ export default function LeaderboardTable({
                     className={`cursor-pointer border-t border-[#2a2a2d]/80 transition hover:bg-[#161618]/60
                       ${r.user_id === currentUserId ? 'bg-[#161618]' : i % 2 ? 'bg-[#0d0d0e]' : ''}`}
                   >
-                    <td className="px-4 py-3 font-semibold text-[#d2d2d7]">{r.current_rank ?? i + 1}</td>
+                    <td className="px-4 py-3 font-semibold text-[#d2d2d7]">{r.current_rank ?? '—'}</td>
                     <td className="px-4 py-3 text-[#f5f5f7]">
                       {r.full_name}
                       {r.user_id === currentUserId && <span className="ml-1.5 text-xs text-[#a1a1a6]">(you)</span>}
