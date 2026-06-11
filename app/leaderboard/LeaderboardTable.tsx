@@ -111,7 +111,8 @@ export default function LeaderboardTable({
         <table className="w-full min-w-[560px] text-sm">
           <thead className="bg-[#161618] text-left text-xs uppercase tracking-wider text-[#a1a1a6]">
             <tr>
-              <th className="px-4 py-3 font-medium">#</th>
+              <th className="px-3 py-3 font-medium text-[#6e6e73]">S.No</th>
+              <th className="px-4 py-3 font-medium">Rank</th>
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Office</th>
               <th className="px-4 py-3 font-medium">Squad</th>
@@ -130,6 +131,7 @@ export default function LeaderboardTable({
                     className={`cursor-pointer border-t border-[#2a2a2d]/80 transition hover:bg-[#161618]/60
                       ${r.user_id === currentUserId ? 'bg-[#161618]' : i % 2 ? 'bg-[#0d0d0e]' : ''}`}
                   >
+                    <td className="px-3 py-3 text-[#6e6e73]">{i + 1}</td>
                     <td className="px-4 py-3 font-semibold text-[#d2d2d7]">{r.current_rank ?? '—'}</td>
                     <td className="px-4 py-3 text-[#f5f5f7]">
                       {r.full_name}
@@ -154,7 +156,7 @@ export default function LeaderboardTable({
                   </tr>
                   {isOpen && (
                     <tr className="border-t border-[#2a2a2d]/50 bg-[#101011]">
-                      <td colSpan={7} className="px-4 py-3">
+                      <td colSpan={8} className="px-4 py-3">
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                           {r.picks.map(p => (
                             <div key={p.slot}

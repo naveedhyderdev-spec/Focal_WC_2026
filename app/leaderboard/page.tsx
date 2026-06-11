@@ -1,5 +1,6 @@
 import { createServerComponentClient } from '@/lib/supabase/server'
 import LeaderboardTable, { type LeaderboardRow } from './LeaderboardTable'
+import NextUpdate from './NextUpdate'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,9 +17,10 @@ export default async function LeaderboardPage() {
       <img src="/trophy.png" alt="" aria-hidden className="animate-float mx-auto mb-6 h-28 w-auto" />
       <h1 className="text-center text-3xl font-semibold tracking-tight text-white sm:text-4xl">Leaderboard</h1>
       <p className="mt-3 text-center text-sm text-[#a1a1a6]">
-        Updated daily as the tournament progresses ·{' '}
+        {(rows ?? []).length} players in the game ·{' '}
         <a href="/how-to-play" className="text-[#d2d2d7] underline-offset-4 hover:underline">How to play</a>
       </p>
+      <NextUpdate />
       {error ? (
         <p className="mt-12 text-center text-red-400">Could not load the leaderboard. Please refresh.</p>
       ) : (
