@@ -8,17 +8,19 @@ import { PICK_DEADLINE } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
 
-/** Start/end of "today" in Dubai time, as ISO instants. */
-function dubaiDayBounds(): { start: string; end: string } {
+/** Match-strip window: from 10h ago through the end of today in Dubai —
+ *  so a match that kicked off before midnight stays visible (with its
+ *  score) until well after it finishes, plus everything later today. */
+function matchWindow(): { start: string; end: string } {
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date()) // YYYY-MM-DD
-  const start = new Date(`${today}T00:00:00+04:00`)
-  const end = new Date(start.getTime() + 24 * 3600 * 1000)
-  return { start: start.toISOString(), end: end.toISOString() }
+  const endOfToday = new Date(new Date(`${today}T00:00:00+04:00`).getTime() + 24 * 3600 * 1000)
+  const start = new Date(Date.now() - 10 * 3600 * 1000)
+  return { start: start.toISOString(), end: endOfToday.toISOString() }
 }
 
 export default async function LeaderboardPage() {
   const supabase = await createServerComponentClient()
-  const { start, end } = dubaiDayBounds()
+  const { start, end } = matchWindow()
   const [{ data: { user } }, { data: rows, error }, { data: todayMatches }, { data: teams }] = await Promise.all([
     supabase.auth.getUser(),
     supabase.rpc('get_leaderboard'),

@@ -28,7 +28,7 @@ export default function MatchStrip({
   return (
     <div className="mt-8">
       <h2 className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.25em] text-[#86868b]">
-        Today&apos;s matches
+        Latest &amp; upcoming matches
       </h2>
       <div className="flex flex-wrap justify-center gap-2">
         {matches.map(m => {

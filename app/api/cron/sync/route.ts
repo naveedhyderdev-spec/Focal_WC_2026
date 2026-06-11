@@ -35,7 +35,32 @@ export async function GET(request: NextRequest) {
 
     // 2. Upsert all matches
     const fdMatches = await fd('/competitions/WC/matches')
-    const matches: FdMatch[] = fdMatches.matches ?? []
+    let matches: FdMatch[] = fdMatches.matches ?? []
+
+    // Guard against feed glitches: football-data occasionally reverts a
+    // live/finished match to TIMED with null scores for a few minutes.
+    // Never let a match regress — keep our last-known state instead.
+    const RANK: Record<string, number> = {
+      SCHEDULED: 0, TIMED: 0, IN_PLAY: 1, PAUSED: 1, FINISHED: 2,
+    }
+    const { data: existingRows } = await admin
+      .from('matches').select('fd_match_id, status, home_score, away_score, winner')
+    const existing = new Map((existingRows ?? []).map(r => [r.fd_match_id, r]))
+    matches = matches.map(m => {
+      const prev = existing.get(m.id)
+      if (prev && (RANK[m.status] ?? 0) < (RANK[prev.status] ?? 0)) {
+        return {
+          ...m,
+          status: prev.status,
+          score: {
+            winner: prev.winner,
+            fullTime: { home: prev.home_score, away: prev.away_score },
+          },
+        }
+      }
+      return m
+    })
+
     if (matches.length > 0) {
       const rows = matches.map(m => ({
         fd_match_id: m.id,
