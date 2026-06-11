@@ -25,6 +25,18 @@ export default function MatchStrip({
   const kickoff = (iso: string | null) =>
     iso ? new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(iso)) : ''
 
+  // The free API tier has no referee clock, so estimate from kickoff time:
+  // first half ≈ elapsed, second half ≈ elapsed minus the 15-min break.
+  const estMinute = (iso: string | null) => {
+    if (!iso) return '● LIVE'
+    const elapsed = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000)
+    if (elapsed < 1) return "~1'"
+    if (elapsed <= 45) return `~${elapsed}'`
+    if (elapsed <= 60) return "HT"
+    const second = Math.min(elapsed - 15, 90)
+    return second >= 90 ? "90'+" : `~${second}'`
+  }
+
   return (
     <div className="mt-8">
       <h2 className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.25em] text-[#86868b]">
@@ -51,7 +63,7 @@ export default function MatchStrip({
               </span>
               <span className={`ml-1 text-[10px] font-bold uppercase tracking-wider
                 ${live ? 'animate-pulse text-[#E8B23A]' : done ? 'text-[#86868b]' : 'text-[#a1a1a6]'}`}>
-                {live ? (m.status === 'PAUSED' ? 'HT' : '● LIVE') : done ? 'FT' : kickoff(m.utc_date)}
+                {live ? (m.status === 'PAUSED' ? 'HT' : `● ${estMinute(m.utc_date)}`) : done ? 'FT' : kickoff(m.utc_date)}
               </span>
             </div>
           )
