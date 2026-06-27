@@ -47,11 +47,11 @@ export default function SyncStatus({
           )}
         </p>
       ) : (
-        <p>No score changes yet — picks are in, waiting for results.</p>
+        <p><span className="text-[#d2d2d7]">Up to date</span> — no score changes right now</p>
       )}
       <p className="mt-0.5 text-[#6e6e73]">
         Checked for updates {ago(lastRunAt)}
-        {!lastRunChanged && lastChangeAt ? ' · no new changes' : ''} · auto-checks every 5 min
+        {!lastRunChanged ? ' · nothing new' : ''} · auto-checks every 5 min
       </p>
     </div>
   )

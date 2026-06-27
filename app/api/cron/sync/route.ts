@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { aggregateTeams, computeScores, normalizeCode, type FdMatch } from '@/lib/sync'
+import { aggregateTeams, computeScores, normalizeCode, detectChanges, type FdMatch } from '@/lib/sync'
 import { stageIndex } from '@/lib/scoring'
 
 const FD_BASE = 'https://api.football-data.org/v4'
@@ -242,31 +242,7 @@ export async function GET(request: NextRequest) {
     } catch { /* standings may 404 before kickoff — not fatal */ }
 
     // Detect WHAT actually changed this run (for the "Last updated" status).
-    const STAGE_LABEL: Record<string, string> = {
-      LAST_32: 'Round of 32', LAST_16: 'Round of 16', QUARTER_FINALS: 'Quarter-final',
-      SEMI_FINALS: 'Semi-final', FINAL: 'the Final',
-    }
-    const changeSummary: string[] = []
-    // match score/status changes (incl. live goals and full-time results)
-    for (const m of matches) {
-      const prev = existing.get(m.id)
-      const hs = m.score.fullTime.home, as = m.score.fullTime.away
-      if (!prev) continue
-      const scoreChanged = hs !== prev.home_score || as !== prev.away_score
-      const becameFinished = m.status === 'FINISHED' && prev.status !== 'FINISHED'
-      if ((scoreChanged || becameFinished) && hs !== null && as !== null) {
-        const label = `${codeName(normalizeCode(m.homeTeam.tla))} ${hs}–${as} ${codeName(normalizeCode(m.awayTeam.tla))}`
-        changeSummary.push(becameFinished ? `${label} (full-time)` : `${label} (live)`)
-      }
-    }
-    // teams advancing a round / winning the cup
-    for (const t of stats.values()) {
-      const prev = existing2.get(t.code)
-      if (!prev) continue
-      if (t.is_champion && !prev.is_champion) changeSummary.push(`${codeName(t.code)} won the World Cup! 🏆`)
-      else if (prev.stage_reached && stageIndex(t.stage_reached) > stageIndex(prev.stage_reached))
-        changeSummary.push(`${codeName(t.code)} reached ${STAGE_LABEL[t.stage_reached] ?? t.stage_reached}`)
-    }
+    const changeSummary = detectChanges(matches, existing, stats.values(), existing2, codeName)
     const didChange = changeSummary.length > 0
 
     // Write all teams in parallel so the table updates near-atomically — a

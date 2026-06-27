@@ -142,5 +142,41 @@ check('tied overall reason mentions split', /split 2 ways/.test(tiePrizes.overal
 const otherWinners = ['group_leader', 'giant_killer', 'climber', 'wooden_spoon'].flatMap(k => tiePrizes[k].names)
 check('co-champions excluded from other prizes', otherWinners.includes('Tara') || otherWinners.includes('Umar'), false)
 
+// ---------- 5. Change detection (Last-updated status) ----------
+import { detectChanges, type FdMatch as FM, type PrevMatch, type PrevTeam, type TeamStats } from '../lib/sync'
+
+const mkMatch = (id: number, status: string, home: string, away: string, h: number | null, a: number | null): FM => ({
+  id, stage: 'GROUP_STAGE', status, homeTeam: { tla: home }, awayTeam: { tla: away },
+  score: { winner: null, fullTime: { home: h, away: a } },
+})
+const nm = (c: string | null) => ({ EGY: 'Egypt', IRN: 'Iran', CIV: 'Ivory Coast', BRA: 'Brazil' }[c ?? ''] ?? c ?? '?')
+
+// No change: identical new vs prev → empty summary
+const prevM = new Map<number, PrevMatch>([[1, { status: 'IN_PLAY', home_score: 1, away_score: 1 }]])
+check('detectChanges: no change → empty', detectChanges([mkMatch(1, 'IN_PLAY', 'EGY', 'IRN', 1, 1)], prevM, [], new Map(), nm), [])
+
+// Live goal: score changed while in play
+check('detectChanges: live goal',
+  detectChanges([mkMatch(1, 'IN_PLAY', 'EGY', 'IRN', 2, 1)], prevM, [], new Map(), nm),
+  ['Egypt 2–1 Iran (live)'])
+
+// Full-time: status advanced to FINISHED
+check('detectChanges: full-time',
+  detectChanges([mkMatch(1, 'FINISHED', 'EGY', 'IRN', 2, 1)], prevM, [], new Map(), nm),
+  ['Egypt 2–1 Iran (full-time)'])
+
+// Team advanced a round + a champion crowned
+const chgStats: TeamStats[] = [
+  { code: 'CIV', stage_reached: 'LAST_32', is_champion: false, is_eliminated: false, goals_for: 0, goals_against: 0, games_played: 0, won: 0, draw: 0, lost: 0, group_points: 0 },
+  { code: 'BRA', stage_reached: 'FINAL', is_champion: true, is_eliminated: false, goals_for: 0, goals_against: 0, games_played: 0, won: 0, draw: 0, lost: 0, group_points: 0 },
+]
+const prevT = new Map<string, PrevTeam>([
+  ['CIV', { stage_reached: 'GROUP_STAGE', is_champion: false }],
+  ['BRA', { stage_reached: 'FINAL', is_champion: false }],
+])
+check('detectChanges: advance + champion',
+  detectChanges([], new Map(), chgStats, prevT, nm),
+  ['Ivory Coast reached Round of 32', 'Brazil won the World Cup! 🏆'])
+
 console.log(failures === 0 ? '\n🎉 All checks passed' : `\n💥 ${failures} check(s) FAILED`)
 process.exit(failures === 0 ? 0 : 1)

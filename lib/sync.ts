@@ -178,3 +178,43 @@ export function computeScores(
   }
   return out
 }
+
+// ---------- change detection (powers the "Last updated" status) ----------
+
+export interface PrevMatch { status: string; home_score: number | null; away_score: number | null }
+export interface PrevTeam { stage_reached: string | null; is_champion: boolean }
+
+const CHANGE_STAGE_LABEL: Record<string, string> = {
+  LAST_32: 'Round of 32', LAST_16: 'Round of 16', QUARTER_FINALS: 'Quarter-final',
+  SEMI_FINALS: 'Semi-final', FINAL: 'the Final',
+}
+
+/** Human summary of what changed vs the previous DB state. Empty = nothing changed. */
+export function detectChanges(
+  matches: FdMatch[],
+  prevMatches: Map<number, PrevMatch>,
+  stats: Iterable<TeamStats>,
+  prevTeams: Map<string, PrevTeam>,
+  nameOf: (code: string | null) => string,
+): string[] {
+  const out: string[] = []
+  for (const m of matches) {
+    const prev = prevMatches.get(m.id)
+    if (!prev) continue
+    const hs = m.score.fullTime.home, as = m.score.fullTime.away
+    const scoreChanged = hs !== prev.home_score || as !== prev.away_score
+    const becameFinished = m.status === 'FINISHED' && prev.status !== 'FINISHED'
+    if ((scoreChanged || becameFinished) && hs !== null && as !== null) {
+      const label = `${nameOf(normalizeCode(m.homeTeam.tla))} ${hs}–${as} ${nameOf(normalizeCode(m.awayTeam.tla))}`
+      out.push(becameFinished ? `${label} (full-time)` : `${label} (live)`)
+    }
+  }
+  for (const t of stats) {
+    const prev = prevTeams.get(t.code)
+    if (!prev) continue
+    if (t.is_champion && !prev.is_champion) out.push(`${nameOf(t.code)} won the World Cup! 🏆`)
+    else if (prev.stage_reached && stageIndex(t.stage_reached) > stageIndex(prev.stage_reached))
+      out.push(`${nameOf(t.code)} reached ${CHANGE_STAGE_LABEL[t.stage_reached] ?? t.stage_reached}`)
+  }
+  return out
+}
