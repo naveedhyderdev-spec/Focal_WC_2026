@@ -114,19 +114,33 @@ const prizeRows: PrizeRow[] = [
 
 const prizes = computePrizes(prizeRows, { groupStageComplete: true, tournamentComplete: true })
 const byKey = Object.fromEntries(prizes.map(p => [p.key, p]))
-check('Overall Champion = Alice', byKey.overall.name, 'Alice')
-check('Group Stage Leader = Bob', byKey.group_leader.name, 'Bob')
-check('Giant Killer = Cara', byKey.giant_killer.name, 'Cara')
-check('Biggest Climber = Dan', byKey.climber.name, 'Dan')
-check('Wooden Spoon = Finn', byKey.wooden_spoon.name, 'Finn')
+check('Overall Champion = Alice', byKey.overall.names, ['Alice'])
+check('Group Stage Leader = Bob', byKey.group_leader.names, ['Bob'])
+check('Giant Killer = Cara', byKey.giant_killer.names, ['Cara'])
+check('Biggest Climber = Dan', byKey.climber.names, ['Dan'])
+check('Wooden Spoon = Finn', byKey.wooden_spoon.names, ['Finn'])
 check('Group Stage Leader status won', byKey.group_leader.status, 'won')
-// one prize per person: all four awarded names are distinct
-const awardedNames = prizes.map(p => p.name).filter(Boolean)
+// one prize per person: all awarded names are distinct
+const awardedNames = prizes.flatMap(p => p.names)
 check('all prize winners distinct', new Set(awardedNames).size, awardedNames.length)
 // pre-group-stage: group leader provisional, climber pending
 const early = computePrizes(prizeRows, { groupStageComplete: false, tournamentComplete: false })
 check('group leader leading before groups end', early.find(p => p.key === 'group_leader')?.status, 'leading')
 check('climber pending before groups end', early.find(p => p.key === 'climber')?.status, 'pending')
+
+// genuine tie at the top (identical rank) → BOTH are Overall Champion, split
+const tieRows: PrizeRow[] = [
+  P('t1', 'Tara', 100, 1, 20, 30),  // current_rank 1
+  P('t2', 'Umar', 100, 1, 18, 28),  // current_rank 1 (truly tied — cron gave same rank)
+  P('t3', 'Vik', 90, 3, 40, 20),
+  P('t4', 'Wim', 5, 4, 1, 4),
+]
+const tiePrizes = Object.fromEntries(computePrizes(tieRows, { groupStageComplete: true, tournamentComplete: true }).map(p => [p.key, p]))
+check('tied Overall Champions = Tara & Umar', tiePrizes.overall.names.slice().sort(), ['Tara', 'Umar'])
+check('tied overall reason mentions split', /split 2 ways/.test(tiePrizes.overall.reason), true)
+// one prize per person still holds: the two co-champions appear in no other prize
+const otherWinners = ['group_leader', 'giant_killer', 'climber', 'wooden_spoon'].flatMap(k => tiePrizes[k].names)
+check('co-champions excluded from other prizes', otherWinners.includes('Tara') || otherWinners.includes('Umar'), false)
 
 console.log(failures === 0 ? '\n🎉 All checks passed' : `\n💥 ${failures} check(s) FAILED`)
 process.exit(failures === 0 ? 0 : 1)

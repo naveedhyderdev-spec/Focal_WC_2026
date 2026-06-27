@@ -29,12 +29,12 @@ export default function WinnerBoard({ prizes }: { prizes: PrizeResult[] }) {
             </div>
             <div className="mt-1 text-[11px] uppercase tracking-wider text-[#86868b]">{p.schedule}</div>
             <div className="mt-3 border-t border-[#2a2a2d] pt-3">
-              {p.status !== 'pending' && p.name ? (
+              {p.status !== 'pending' && p.names.length > 0 ? (
                 <>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2">
                     {p.status === 'won'
-                      ? <><span className="text-lg">🏆</span><span className="font-heading text-base font-semibold text-white">{p.name}</span></>
-                      : <span className="text-sm text-[#d2d2d7]"><span className="text-[#86868b]">Leading:</span> {p.name}</span>}
+                      ? <><span className="text-lg leading-tight">🏆</span><span className="font-heading text-base font-semibold leading-tight text-white">{p.names.join(' & ')}</span></>
+                      : <span className="text-sm text-[#d2d2d7]"><span className="text-[#86868b]">Leading:</span> {p.names.join(' & ')}</span>}
                   </div>
                   <div className="mt-1 text-xs text-[#86868b]">
                     {p.reason}{p.status === 'leading' && ' · provisional'}

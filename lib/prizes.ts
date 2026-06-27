@@ -62,8 +62,8 @@ export interface PrizeResult {
   schedule: string
   explainer: string       // what the prize means (hover tooltip)
   status: 'won' | 'leading' | 'pending'
-  name: string | null
-  reason: string          // why this person leads/won, with their number
+  names: string[]         // 1 normally; 2+ on a genuine tie (they split)
+  reason: string          // why they lead/won, with the number
 }
 
 export function computePrizes(
@@ -71,7 +71,7 @@ export function computePrizes(
   opts: { groupStageComplete: boolean; tournamentComplete: boolean },
 ): PrizeResult[] {
   if (rows.length === 0)
-    return PRIZE_BOARD.map(p => ({ ...p, status: 'pending' as const, name: null, reason: '' }))
+    return PRIZE_BOARD.map(p => ({ ...p, status: 'pending' as const, names: [], reason: '' }))
 
   const gsScore = new Map(rows.map(r => [r.user_id, groupStageScore(r)]))
   const gsRank = rankBy(rows, r => gsScore.get(r.user_id) ?? 0)
@@ -86,13 +86,32 @@ export function computePrizes(
     wooden_spoon: [...rows].sort((a, b) => finalRank(b) - finalRank(a)),
   }
 
-  // one prize per person — assign largest amount first
+  // Tie key per prize: players sharing this exact value are GENUINELY tied
+  // (after tiebreakers) and become co-winners who split the prize. finalRank
+  // already encodes the points + lucky/Outsider tiebreakers from the cron, so
+  // identical finalRank = a true tie for overall/wooden-spoon.
+  const r1 = (x: number) => x.toFixed(1)
+  const tieKey = (key: string, r: PrizeRow): string => {
+    switch (key) {
+      case 'overall': case 'wooden_spoon': return `r${finalRank(r)}`
+      case 'group_leader': return `g${r1(gsScore.get(r.user_id) ?? 0)}`
+      case 'giant_killer': return `k${r1(r.giant_killer_points)}`
+      case 'climber': return `c${(gsRank.get(r.user_id) ?? rows.length) - finalRank(r)}`
+      default: return ''
+    }
+  }
+
+  // one prize per person — assign largest amount first; a genuine tie at the
+  // top of a prize makes ALL tied players co-winners (they split it).
   const awarded = new Set<string>()
-  const winner: Record<string, PrizeRow | null> = {}
+  const winners: Record<string, PrizeRow[]> = {}
   for (const p of [...PRIZE_BOARD].sort((a, b) => b.amount - a.amount)) {
-    const pick = candidates[p.key].find(r => !awarded.has(r.user_id)) ?? null
-    if (pick) awarded.add(pick.user_id)
-    winner[p.key] = pick
+    const pool = candidates[p.key].filter(r => !awarded.has(r.user_id))
+    if (pool.length === 0) { winners[p.key] = []; continue }
+    const topKey = tieKey(p.key, pool[0])
+    const tied = pool.filter(r => tieKey(p.key, r) === topKey)
+    winners[p.key] = tied
+    tied.forEach(r => awarded.add(r.user_id))
   }
 
   const statusFor = (key: string): 'won' | 'leading' | 'pending' => {
@@ -104,18 +123,20 @@ export function computePrizes(
     return opts.tournamentComplete ? 'won' : 'leading'
   }
 
-  const reasonFor = (key: string, w: PrizeRow | null): string => {
-    if (!w) return ''
+  const reasonFor = (key: string, ws: PrizeRow[]): string => {
+    if (ws.length === 0) return ''
+    const w = ws[0]
     const n = (x: number) => Number.isInteger(x) ? `${x}` : x.toFixed(1)
+    const split = ws.length > 1 ? ` · tied, split ${ws.length} ways` : ''
     switch (key) {
-      case 'overall': return `${n(w.total_points)} total points`
-      case 'group_leader': return `${n(gsScore.get(w.user_id) ?? 0)} points in the group stage`
-      case 'giant_killer': return `${n(w.giant_killer_points)} points from their Outsider + Lucky Country`
+      case 'overall': return `${n(w.total_points)} total points${split}`
+      case 'group_leader': return `${n(gsScore.get(w.user_id) ?? 0)} points in the group stage${split}`
+      case 'giant_killer': return `${n(w.giant_killer_points)} points from their Outsider + Lucky Country${split}`
       case 'climber': {
         const c = (gsRank.get(w.user_id) ?? rows.length) - finalRank(w)
-        return c > 0 ? `up ${c} place${c > 1 ? 's' : ''} since the group stage` : 'holding their position so far'
+        return (c > 0 ? `up ${c} place${c > 1 ? 's' : ''} since the group stage` : 'holding their position so far') + split
       }
-      case 'wooden_spoon': return `currently last on ${n(w.total_points)} points`
+      case 'wooden_spoon': return `last on ${n(w.total_points)} points${split}`
       default: return ''
     }
   }
@@ -123,7 +144,7 @@ export function computePrizes(
   return PRIZE_BOARD.map(p => ({
     ...p,
     status: statusFor(p.key),
-    name: winner[p.key]?.full_name ?? null,
-    reason: reasonFor(p.key, winner[p.key]),
+    names: winners[p.key].map(w => w.full_name),
+    reason: reasonFor(p.key, winners[p.key]),
   }))
 }
