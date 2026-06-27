@@ -56,9 +56,10 @@ export async function GET(request: NextRequest) {
   try {
     // 1. Map fd team ids → our team codes
     const fdTeams = await fd('/competitions/WC/teams')
-    const { data: ourTeams, error: teamsErr } = await admin.from('teams').select('id, code, tier')
+    const { data: ourTeams, error: teamsErr } = await admin.from('teams').select('id, code, tier, name')
     if (teamsErr || !ourTeams) throw new Error(`teams read: ${teamsErr?.message}`)
     const codeToTeam = new Map(ourTeams.map(t => [t.code, t]))
+    const codeName = (c: string | null) => (c ? codeToTeam.get(c)?.name ?? c : '?')
 
     for (const ft of fdTeams.teams ?? []) {
       const code = normalizeCode(ft.tla)
@@ -240,6 +241,34 @@ export async function GET(request: NextRequest) {
           }
     } catch { /* standings may 404 before kickoff — not fatal */ }
 
+    // Detect WHAT actually changed this run (for the "Last updated" status).
+    const STAGE_LABEL: Record<string, string> = {
+      LAST_32: 'Round of 32', LAST_16: 'Round of 16', QUARTER_FINALS: 'Quarter-final',
+      SEMI_FINALS: 'Semi-final', FINAL: 'the Final',
+    }
+    const changeSummary: string[] = []
+    // match score/status changes (incl. live goals and full-time results)
+    for (const m of matches) {
+      const prev = existing.get(m.id)
+      const hs = m.score.fullTime.home, as = m.score.fullTime.away
+      if (!prev) continue
+      const scoreChanged = hs !== prev.home_score || as !== prev.away_score
+      const becameFinished = m.status === 'FINISHED' && prev.status !== 'FINISHED'
+      if ((scoreChanged || becameFinished) && hs !== null && as !== null) {
+        const label = `${codeName(normalizeCode(m.homeTeam.tla))} ${hs}–${as} ${codeName(normalizeCode(m.awayTeam.tla))}`
+        changeSummary.push(becameFinished ? `${label} (full-time)` : `${label} (live)`)
+      }
+    }
+    // teams advancing a round / winning the cup
+    for (const t of stats.values()) {
+      const prev = existing2.get(t.code)
+      if (!prev) continue
+      if (t.is_champion && !prev.is_champion) changeSummary.push(`${codeName(t.code)} won the World Cup! 🏆`)
+      else if (prev.stage_reached && stageIndex(t.stage_reached) > stageIndex(prev.stage_reached))
+        changeSummary.push(`${codeName(t.code)} reached ${STAGE_LABEL[t.stage_reached] ?? t.stage_reached}`)
+    }
+    const didChange = changeSummary.length > 0
+
     // Write all teams in parallel so the table updates near-atomically — a
     // leaderboard read can no longer catch a half-updated set of teams.
     await Promise.all([...stats.values()].map(async t => {
@@ -302,10 +331,28 @@ export async function GET(request: NextRequest) {
       if (error) throw new Error(`scores upsert: ${error.message}`)
     }
 
+    // 5. Record sync metadata for the "Last updated" status. last_run_at bumps
+    // every run (proves the system is alive); last_change_at + summary only bump
+    // when something ACTUALLY changed. Non-fatal: if the table isn't there yet
+    // (migration not run), we skip silently rather than failing the sync.
+    const nowIso = new Date().toISOString()
+    try {
+      const meta: Record<string, unknown> = { id: 1, last_run_at: nowIso, changed: didChange }
+      if (didChange) {
+        meta.last_change_at = nowIso
+        meta.summary = changeSummary.slice(0, 8)
+      }
+      await admin.from('sync_meta').upsert(meta, { onConflict: 'id' })
+    } catch (e) {
+      console.error('sync_meta write skipped:', e)
+    }
+
     return NextResponse.json({
       ok: true,
       matches: matches.length,
       players_scored: scoreRows.length,
+      changed: didChange,
+      changes: changeSummary.slice(0, 8),
     })
   } catch (e) {
     console.error('cron sync failed:', e)

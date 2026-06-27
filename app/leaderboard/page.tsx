@@ -1,6 +1,6 @@
 import { createServerComponentClient } from '@/lib/supabase/server'
 import LeaderboardTable, { type LeaderboardRow } from './LeaderboardTable'
-import NextUpdate from './NextUpdate'
+import SyncStatus from './SyncStatus'
 import DeadlineBanner from '@/components/DeadlineBanner'
 import MatchStrip, { type MatchLite } from './MatchStrip'
 import AutoRefresh from './AutoRefresh'
@@ -23,14 +23,17 @@ function matchWindow(): { start: string; end: string } {
 export default async function LeaderboardPage() {
   const supabase = await createServerComponentClient()
   const { start, end } = matchWindow()
-  const [{ data: { user } }, { data: rows, error }, { data: todayMatches }, { data: teams }] = await Promise.all([
+  const [{ data: { user } }, { data: rows, error }, { data: todayMatches }, { data: teams }, syncMetaRes] = await Promise.all([
     supabase.auth.getUser(),
     supabase.rpc('get_leaderboard'),
     supabase.from('matches')
       .select('fd_match_id, status, utc_date, home_team_code, away_team_code, home_score, away_score')
       .gte('utc_date', start).lt('utc_date', end).order('utc_date'),
     supabase.from('teams').select('code, name, stage_reached, is_champion'),
+    // sync status — graceful if the table isn't migrated yet
+    supabase.from('sync_meta').select('last_run_at, last_change_at, changed, summary').eq('id', 1).maybeSingle(),
   ])
+  const meta = syncMetaRes?.data ?? null
 
   const names = Object.fromEntries((teams ?? []).map(t => [t.code, t.name]))
   // Tournament phase drives the Winner Board: group stage is over once any
@@ -61,7 +64,12 @@ export default async function LeaderboardPage() {
         {(rows ?? []).length} players in the game ·{' '}
         <a href="/how-to-play" className="text-[#d2d2d7] underline-offset-4 hover:underline">How to play</a>
       </p>
-      <NextUpdate />
+      <SyncStatus
+        lastRunAt={meta?.last_run_at ?? null}
+        lastChangeAt={meta?.last_change_at ?? null}
+        lastRunChanged={meta?.changed ?? false}
+        summary={(meta?.summary as string[]) ?? []}
+      />
       <DeadlineBanner deadlineIso={PICK_DEADLINE.toISOString()} />
       <MatchStrip matches={(todayMatches ?? []) as MatchLite[]} names={names} />
       {!error && <WinnerBoard prizes={prizes} />}
