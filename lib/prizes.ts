@@ -24,11 +24,16 @@ export interface PrizeRow {
 }
 
 export const PRIZE_BOARD = [
-  { key: 'overall', label: 'Overall Champion', amount: 650, schedule: 'After the Final · ~19 July' },
-  { key: 'group_leader', label: 'Group Stage Leader', amount: 100, schedule: 'End of group stage · ~28 June' },
-  { key: 'giant_killer', label: 'Giant Killer', amount: 100, schedule: 'After the Final · ~19 July' },
-  { key: 'climber', label: 'Biggest Climber', amount: 75, schedule: 'After the Final · ~19 July' },
-  { key: 'wooden_spoon', label: 'Wooden Spoon', amount: 75, schedule: 'After the Final · ~19 July' },
+  { key: 'overall', label: 'Overall Champion', amount: 650, schedule: 'After the Final · ~19 July',
+    explainer: 'Most total points across the whole tournament when the Final ends. The big one.' },
+  { key: 'group_leader', label: 'Group Stage Leader', amount: 100, schedule: 'End of group stage · ~28 June',
+    explainer: 'Most points from the group stage alone. Locked once the groups end — it stays even if they are overtaken on the overall table later.' },
+  { key: 'giant_killer', label: 'Giant Killer', amount: 100, schedule: 'After the Final · ~19 July',
+    explainer: 'Most points from just your Outsider (Tier C) + Lucky Country combined. Rewards whoever backed the right underdogs, even if their overall score is modest.' },
+  { key: 'climber', label: 'Biggest Climber', amount: 75, schedule: 'After the Final · ~19 July',
+    explainer: 'Biggest jump up the leaderboard between the end of the group stage and the Final — the best comeback.' },
+  { key: 'wooden_spoon', label: 'Wooden Spoon', amount: 75, schedule: 'After the Final · ~19 July',
+    explainer: 'Finishes dead last on the final table. Someone has to — and they get a prize for it!' },
 ] as const
 
 /** Score a player would have had at the end of the group stage:
@@ -55,8 +60,10 @@ export interface PrizeResult {
   label: string
   amount: number
   schedule: string
+  explainer: string       // what the prize means (hover tooltip)
   status: 'won' | 'leading' | 'pending'
   name: string | null
+  reason: string          // why this person leads/won, with their number
 }
 
 export function computePrizes(
@@ -64,7 +71,7 @@ export function computePrizes(
   opts: { groupStageComplete: boolean; tournamentComplete: boolean },
 ): PrizeResult[] {
   if (rows.length === 0)
-    return PRIZE_BOARD.map(p => ({ ...p, status: 'pending' as const, name: null }))
+    return PRIZE_BOARD.map(p => ({ ...p, status: 'pending' as const, name: null, reason: '' }))
 
   const gsScore = new Map(rows.map(r => [r.user_id, groupStageScore(r)]))
   const gsRank = rankBy(rows, r => gsScore.get(r.user_id) ?? 0)
@@ -97,9 +104,26 @@ export function computePrizes(
     return opts.tournamentComplete ? 'won' : 'leading'
   }
 
+  const reasonFor = (key: string, w: PrizeRow | null): string => {
+    if (!w) return ''
+    const n = (x: number) => Number.isInteger(x) ? `${x}` : x.toFixed(1)
+    switch (key) {
+      case 'overall': return `${n(w.total_points)} total points`
+      case 'group_leader': return `${n(gsScore.get(w.user_id) ?? 0)} points in the group stage`
+      case 'giant_killer': return `${n(w.giant_killer_points)} points from their Outsider + Lucky Country`
+      case 'climber': {
+        const c = (gsRank.get(w.user_id) ?? rows.length) - finalRank(w)
+        return c > 0 ? `up ${c} place${c > 1 ? 's' : ''} since the group stage` : 'holding their position so far'
+      }
+      case 'wooden_spoon': return `currently last on ${n(w.total_points)} points`
+      default: return ''
+    }
+  }
+
   return PRIZE_BOARD.map(p => ({
     ...p,
     status: statusFor(p.key),
     name: winner[p.key]?.full_name ?? null,
+    reason: reasonFor(p.key, winner[p.key]),
   }))
 }

@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, useState } from 'react'
 import Flag from '@/components/Flag'
-import { SLOT_LABEL, SLOT_MULTIPLIER, type Slot } from '@/lib/scoring'
+import { SLOT_LABEL, SLOT_MULTIPLIER, KNOCKOUT_POINTS, LUCKY_QF_BONUS, LUCKY_JACKPOT, type Slot } from '@/lib/scoring'
 
 interface PickJson {
   slot: Slot
@@ -125,7 +125,15 @@ export default function LeaderboardTable({
                     <tr className="border-t border-[#2a2a2d]/50 bg-[#101011]">
                       <td colSpan={8} className="px-4 py-3">
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                          {r.picks.map(p => (
+                          {r.picks.map(p => {
+                            const kn = p.is_champion ? KNOCKOUT_POINTS.WINNER : (KNOCKOUT_POINTS[p.stage_reached] ?? 0)
+                            const mult = SLOT_MULTIPLIER[p.slot]
+                            const base = (p.group_points + kn) * mult
+                            const bonus = p.slot === 'lucky'
+                              ? ((p.is_champion ? LUCKY_QF_BONUS + LUCKY_JACKPOT : kn >= KNOCKOUT_POINTS.QUARTER_FINALS ? LUCKY_QF_BONUS : 0))
+                              : 0
+                            const total = base + bonus
+                            return (
                             <div key={p.slot}
                               className={`rounded border px-3 py-2.5 ${p.alive ? 'border-[#3a3a3d] bg-[#161618]/60' : 'border-[#2a2a2d] bg-transparent opacity-50'}`}>
                               <div className="flex items-center justify-between">
@@ -133,15 +141,21 @@ export default function LeaderboardTable({
                                   <Flag code={p.code} /> {p.name}
                                 </span>
                                 <span className="text-[10px] uppercase tracking-wider text-[#a1a1a6]">
-                                  {SLOT_LABEL[p.slot]} ×{SLOT_MULTIPLIER[p.slot]}
+                                  {SLOT_LABEL[p.slot]} ×{mult}
                                 </span>
                               </div>
                               <div className="mt-1.5 text-xs text-[#a1a1a6]">
                                 {p.is_champion ? 'Champion' : STAGE_LABEL[p.stage_reached] ?? p.stage_reached}
                                 {!p.alive && ' · out'} · {p.group_points} grp pts · {p.goals_for} goals · {p.won}-{p.draw}-{p.lost}
                               </div>
+                              {/* how this pick's points are calculated */}
+                              <div className="mt-2 border-t border-[#2a2a2d] pt-2 text-xs text-[#d2d2d7]">
+                                ({p.group_points} grp {kn ? `+ ${kn} ${p.is_champion ? 'champion' : STAGE_LABEL[p.stage_reached] ?? ''}` : '+ 0 knockout'}) × {mult}
+                                {bonus ? ` + ${bonus} bonus` : ''} ={' '}
+                                <span className="font-heading font-semibold text-[#E8B23A]">{total} pts</span>
+                              </div>
                             </div>
-                          ))}
+                          )})}
                         </div>
                       </td>
                     </tr>
