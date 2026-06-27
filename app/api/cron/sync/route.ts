@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { aggregateTeams, computeScores, normalizeCode, type FdMatch } from '@/lib/sync'
+import { stageIndex } from '@/lib/scoring'
 
 const FD_BASE = 'https://api.football-data.org/v4'
 const ESPN_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard'
@@ -135,38 +136,35 @@ export async function GET(request: NextRequest) {
       SCHEDULED: 0, TIMED: 0, IN_PLAY: 1, PAUSED: 1, FINISHED: 2,
     }
     const { data: existingRows } = await admin
-      .from('matches').select('fd_match_id, status, home_score, away_score, winner')
+      .from('matches').select('fd_match_id, status, home_team_code, away_team_code, home_score, away_score, winner')
     const existing = new Map((existingRows ?? []).map(r => [r.fd_match_id, r]))
     matches = matches.map(m => {
       const prev = existing.get(m.id)
       if (!prev) return m
-      // status regression → keep our last-known state entirely
+      let status = m.status
+      let home = m.score.fullTime.home
+      let away = m.score.fullTime.away
+      let winner = m.score.winner ?? null
+      // status regression → keep our last-known status + score
       if ((RANK[m.status] ?? 0) < (RANK[prev.status] ?? 0)) {
-        return {
-          ...m,
-          status: prev.status,
-          score: {
-            winner: prev.winner,
-            fullTime: { home: prev.home_score, away: prev.away_score },
-          },
-        }
+        status = prev.status; home = prev.home_score; away = prev.away_score; winner = prev.winner
+      } else if (home === null && away === null && prev.home_score !== null && prev.away_score !== null) {
+        // status held/advanced but score went missing → keep last-known score
+        home = prev.home_score; away = prev.away_score
+        winner = status === 'FINISHED' ? (home! > away! ? 'HOME_TEAM' : away! > home! ? 'AWAY_TEAM' : 'DRAW') : prev.winner
       }
-      // status advanced but score went missing (e.g. FINISHED with nulls
-      // while we held a real live score) → keep our last-known score
-      if (m.score.fullTime.home === null && m.score.fullTime.away === null
-          && prev.home_score !== null && prev.away_score !== null) {
-        const h = prev.home_score, a = prev.away_score
-        return {
-          ...m,
-          score: {
-            winner: m.status === 'FINISHED'
-              ? (h > a ? 'HOME_TEAM' : a > h ? 'AWAY_TEAM' : 'DRAW')
-              : prev.winner,
-            fullTime: { home: h, away: a },
-          },
-        }
+      // NEVER overwrite a known knockout-bracket team with null. The live feed
+      // intermittently drops the R32+ team names (showing them as TBD/null),
+      // which was wiping the bracket and flickering the leaderboard.
+      const homeTla = (normalizeCode(m.homeTeam.tla) ?? prev.home_team_code) as string | null
+      const awayTla = (normalizeCode(m.awayTeam.tla) ?? prev.away_team_code) as string | null
+      return {
+        ...m,
+        status,
+        homeTeam: { ...m.homeTeam, tla: homeTla },
+        awayTeam: { ...m.awayTeam, tla: awayTla },
+        score: { winner, fullTime: { home, away } },
       }
-      return m
     })
 
     if (matches.length > 0) {
@@ -206,10 +204,30 @@ export async function GET(request: NextRequest) {
     }))
     const stats = aggregateTeams(matchesForAgg, ourTeams.map(t => t.code))
 
-    // group_position comes from standings (separate call). If standings is
-    // degraded/empty, KEEP the existing position rather than nulling it.
-    const { data: existingTeams } = await admin.from('teams').select('code, group_position')
-    const existingPos = new Map((existingTeams ?? []).map(t => [t.code, t.group_position]))
+    // Per-team NO-REGRESSION guard — the final safety net. Read current team
+    // rows and never let a stat go BACKWARDS: cumulative counts only rise,
+    // stage only advances, eliminated/champion are sticky, group_position is
+    // kept if standings degrade. So even if a feed glitch slips through every
+    // earlier guard, scores and stages can only ever move forward. This (with
+    // the match-table guards above) is what stops the leaderboard flicker.
+    const { data: existingTeams } = await admin.from('teams').select(
+      'code, goals_for, goals_against, games_played, won, draw, lost, group_points, stage_reached, is_eliminated, is_champion, group_position')
+    const existing2 = new Map((existingTeams ?? []).map(t => [t.code, t]))
+    for (const t of stats.values()) {
+      const p = existing2.get(t.code)
+      if (!p) continue
+      t.goals_for = Math.max(t.goals_for, p.goals_for ?? 0)
+      t.goals_against = Math.max(t.goals_against, p.goals_against ?? 0)
+      t.games_played = Math.max(t.games_played, p.games_played ?? 0)
+      t.won = Math.max(t.won, p.won ?? 0)
+      t.draw = Math.max(t.draw, p.draw ?? 0)
+      t.lost = Math.max(t.lost, p.lost ?? 0)
+      t.group_points = Math.max(t.group_points, p.group_points ?? 0)
+      if (p.stage_reached && stageIndex(p.stage_reached) > stageIndex(t.stage_reached))
+        t.stage_reached = p.stage_reached
+      t.is_eliminated = t.is_eliminated || !!p.is_eliminated
+      t.is_champion = t.is_champion || !!p.is_champion
+    }
 
     const groupPos = new Map<string, number>()
     try {
@@ -237,7 +255,7 @@ export async function GET(request: NextRequest) {
         games_played: t.games_played,
         won: t.won, draw: t.draw, lost: t.lost,
         group_points: t.group_points,
-        group_position: groupPos.get(t.code) ?? existingPos.get(t.code) ?? null,
+        group_position: groupPos.get(t.code) ?? existing2.get(t.code)?.group_position ?? null,
       }).eq('id', ours.id)
       if (error) throw new Error(`team ${t.code} update: ${error.message}`)
     }))
