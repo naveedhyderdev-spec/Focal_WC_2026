@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, useState } from 'react'
 import Flag from '@/components/Flag'
-import { PRIZES, SHOW_PRIZE_STRIP, SLOT_LABEL, SLOT_MULTIPLIER, type Slot } from '@/lib/scoring'
+import { SLOT_LABEL, SLOT_MULTIPLIER, type Slot } from '@/lib/scoring'
 
 interface PickJson {
   slot: Slot
@@ -39,32 +39,6 @@ const STAGE_LABEL: Record<string, string> = {
   QUARTER_FINALS: 'Quarter-final', SEMI_FINALS: 'Semi-final', FINAL: 'Final',
 }
 
-// Live prize holders with the one-prize-per-person rule: assign from the
-// largest prize down, skipping anyone already awarded. Snapshot prizes
-// (Group Stage Leader, Biggest Climber) activate after the group stage.
-function livePrizeHolders(rows: LeaderboardRow[]): { label: string; amount: number; name: string }[] {
-  if (!SHOW_PRIZE_STRIP || rows.length === 0) return []
-  // Before any match is played everyone is on 0 — naming "winners" would be
-  // meaningless, so hide the prize strip until real points exist.
-  if (!rows.some(r => r.total_points > 0)) return []
-  const candidates: Record<string, LeaderboardRow[]> = {
-    overall: [...rows].sort((a, b) => b.total_points - a.total_points),
-    giant_killer: [...rows].sort((a, b) => b.giant_killer_points - a.giant_killer_points),
-    wooden_spoon: [...rows].sort((a, b) => a.total_points - b.total_points),
-  }
-  const awarded = new Set<string>()
-  const result: { label: string; amount: number; name: string }[] = []
-  for (const prize of [...PRIZES].sort((a, b) => b.amount - a.amount)) {
-    const pool = candidates[prize.key]
-    if (!pool) continue // snapshot-based prize, not live yet
-    const winner = pool.find(r => !awarded.has(r.user_id))
-    if (!winner) continue
-    awarded.add(winner.user_id)
-    result.push({ label: prize.label, amount: prize.amount, name: winner.full_name })
-  }
-  return result
-}
-
 export default function LeaderboardTable({
   rows, currentUserId, liveCodes = [],
 }: {
@@ -80,26 +54,12 @@ export default function LeaderboardTable({
   const [office, setOffice] = useState('All')
   const [open, setOpen] = useState<string | null>(null)
   const filtered = office === 'All' ? rows : rows.filter(r => r.office_location === office)
-  const prizes = useMemo(() => livePrizeHolders(rows), [rows])
 
   if (rows.length === 0)
     return <p className="mt-12 text-center text-[#a1a1a6]">No picks submitted yet — be the first.</p>
 
   return (
     <div className="mt-10">
-      {prizes.length > 0 && (
-        <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {prizes.map(p => (
-            <div key={p.label} className="rounded border border-[#2a2a2d] bg-[#161618] px-4 py-3">
-              <div className="text-[10px] uppercase tracking-[0.2em] text-[#a1a1a6]">
-                {p.label} · <span className="font-semibold text-[#E8B23A]">${p.amount}</span>
-              </div>
-              <div className="mt-1 text-sm text-[#f5f5f7]">{p.name}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
       <div className="mb-5 flex flex-wrap justify-center gap-2">
         {offices.map(o => (
           <button key={o} onClick={() => setOffice(o)}

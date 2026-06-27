@@ -1,13 +1,14 @@
-name: Hourly score sync
+name: Score sync backstop
 
-# Vercel Hobby only allows one cron per day, so GitHub Actions provides the
-# intraday refreshes. The endpoint is idempotent — it rebuilds the calculated
-# scores from raw picks + match results every run. 3 football-data API calls
-# per run, far inside the 10/min rate limit.
+# Primary sync is cron-job.org every 5 minutes. This is only a BACKSTOP in
+# case that external scheduler dies — runs every 6 hours at :07 (off the
+# 5-minute grid so it never collides with the primary). The endpoint is
+# idempotent: it rebuilds the calculated scores from the matches table + raw
+# picks each run, with retries on transient feed errors.
 on:
   schedule:
-    - cron: '5 * * * *'   # every hour at :05
-  workflow_dispatch: {}    # manual "Run workflow" button
+    - cron: '7 */6 * * *'   # 00:07, 06:07, 12:07, 18:07 UTC
+  workflow_dispatch: {}      # manual "Run workflow" button
 
 jobs:
   sync:

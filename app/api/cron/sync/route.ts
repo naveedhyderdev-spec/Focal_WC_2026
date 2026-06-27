@@ -26,11 +26,30 @@ export async function GET(request: NextRequest) {
 
   const fdHeaders = { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY! }
   const admin = createAdminClient()
+  const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
+  // Retry transient football-data failures (5xx, 429, network) up to 3x with
+  // backoff so a momentary blip doesn't fail the whole sync.
   const fd = async (path: string) => {
-    const res = await fetch(`${FD_BASE}${path}`, { headers: fdHeaders, cache: 'no-store' })
-    if (!res.ok) throw new Error(`football-data ${path} → ${res.status}`)
-    return res.json()
+    let lastErr: unknown
+    for (let attempt = 0; attempt < 3; attempt++) {
+      let res: Response
+      try {
+        res = await fetch(`${FD_BASE}${path}`, { headers: fdHeaders, cache: 'no-store' })
+      } catch (e) {
+        lastErr = e
+        await sleep(300 * (attempt + 1))
+        continue
+      }
+      if (res.ok) return res.json()
+      lastErr = new Error(`football-data ${path} → ${res.status}`)
+      if (res.status >= 500 || res.status === 429) {
+        await sleep(300 * (attempt + 1))
+        continue
+      }
+      throw lastErr // 4xx (e.g. standings 404 pre-tournament) — don't retry
+    }
+    throw lastErr
   }
 
   try {
@@ -167,8 +186,30 @@ export async function GET(request: NextRequest) {
       if (error) throw new Error(`matches upsert: ${error.message}`)
     }
 
-    // 3. Aggregate team stats + group positions from standings
-    const stats = aggregateTeams(matches, ourTeams.map(t => t.code))
+    // 3. Aggregate team stats from the FULL matches table (not just this
+    // response). The matches table is the merged best-known truth — protected
+    // by the per-match guard above and never reduced by upserts. Computing
+    // from it means a partial/empty/degraded API response can NEVER zero out
+    // team stats, which was the cause of the leaderboard flicker.
+    const { data: allMatchRows, error: allMatchErr } = await admin
+      .from('matches')
+      .select('fd_match_id, stage, status, utc_date, home_team_code, away_team_code, home_score, away_score, winner')
+    if (allMatchErr) throw new Error(`matches read: ${allMatchErr.message}`)
+    const matchesForAgg: FdMatch[] = (allMatchRows ?? []).map(r => ({
+      id: r.fd_match_id,
+      stage: r.stage,
+      status: r.status,
+      utcDate: r.utc_date ?? undefined,
+      homeTeam: { tla: r.home_team_code },
+      awayTeam: { tla: r.away_team_code },
+      score: { winner: r.winner, fullTime: { home: r.home_score, away: r.away_score } },
+    }))
+    const stats = aggregateTeams(matchesForAgg, ourTeams.map(t => t.code))
+
+    // group_position comes from standings (separate call). If standings is
+    // degraded/empty, KEEP the existing position rather than nulling it.
+    const { data: existingTeams } = await admin.from('teams').select('code, group_position')
+    const existingPos = new Map((existingTeams ?? []).map(t => [t.code, t.group_position]))
 
     const groupPos = new Map<string, number>()
     try {
@@ -181,9 +222,11 @@ export async function GET(request: NextRequest) {
           }
     } catch { /* standings may 404 before kickoff — not fatal */ }
 
-    for (const t of stats.values()) {
+    // Write all teams in parallel so the table updates near-atomically — a
+    // leaderboard read can no longer catch a half-updated set of teams.
+    await Promise.all([...stats.values()].map(async t => {
       const ours = codeToTeam.get(t.code)
-      if (!ours) continue
+      if (!ours) return
       const { error } = await admin.from('teams').update({
         stage_reached: t.stage_reached,
         is_eliminated: t.is_eliminated,
@@ -194,10 +237,10 @@ export async function GET(request: NextRequest) {
         games_played: t.games_played,
         won: t.won, draw: t.draw, lost: t.lost,
         group_points: t.group_points,
-        group_position: groupPos.get(t.code) ?? null,
+        group_position: groupPos.get(t.code) ?? existingPos.get(t.code) ?? null,
       }).eq('id', ours.id)
       if (error) throw new Error(`team ${t.code} update: ${error.message}`)
-    }
+    }))
 
     // 4. Recompute all scores + ranks
     const { data: pickRows, error: picksErr } = await admin

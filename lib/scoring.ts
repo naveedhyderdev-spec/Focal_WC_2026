@@ -35,21 +35,7 @@ export const TIER_LABEL: Record<Tier, string> = {
   A: 'Tier A · Favourites', B: 'Tier B · Contenders', C: 'Tier C · Outsiders',
 }
 
-/** Prize pot: $1,000 split across five prizes, ONE prize per person —
- *  if someone tops two categories they take the larger, the smaller passes
- *  to the next eligible player. Amounts from the official deck. */
-export const PRIZES: { key: string; label: string; amount: number }[] = [
-  { key: 'overall', label: 'Overall Champion', amount: 650 },
-  { key: 'group_leader', label: 'Group Stage Leader', amount: 100 },
-  { key: 'giant_killer', label: 'Giant Killer', amount: 100 },
-  { key: 'climber', label: 'Biggest Climber', amount: 75 },
-  { key: 'wooden_spoon', label: 'Wooden Spoon', amount: 75 },
-]
-
-/** Show the live prize-holders strip on the leaderboard. Off for the early
- *  group stage (everyone's tied — naming "winners" is noise); flip to true
- *  once the table spreads out, e.g. late group stage. */
-export const SHOW_PRIZE_STRIP = false
+// Prize amounts + the Winner Board live in lib/prizes.ts (single source).
 
 export const PRIZE_TEXT =
   'Five prizes share the $1,000 pot: Overall Champion, Group Stage Leader, Giant Killer ' +

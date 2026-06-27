@@ -85,5 +85,48 @@ check('u1 giant killer points', totals.get('u1')?.giant_killer_points, 12.5 + 79
 check('u1 lucky_stage (SF=4)', totals.get('u1')?.lucky_stage, 4)
 check('u1 c_stage (R32=1)', totals.get('u1')?.c_stage, 1)
 
+// ---------- 4. Prize board ----------
+import { groupStageScore, computePrizes, type PrizeRow } from '../lib/prizes'
+
+// group-stage score = Σ group_points × slot multiplier (knockouts excluded)
+check('groupStageScore A=7,B=6,C=4,lucky=6',
+  groupStageScore({ user_id: 'x', full_name: 'x', total_points: 0, giant_killer_points: 0, current_rank: 1,
+    picks: [
+      { slot: 'A', group_points: 7 }, { slot: 'B', group_points: 6 },
+      { slot: 'C', group_points: 4 }, { slot: 'lucky', group_points: 6 },
+    ] }),
+  7 * 1 + 6 * 1.5 + 4 * 2.5 + 6 * 1.5)  // 7 + 9 + 10 + 9 = 35
+
+// gs (group-stage score) is controlled via the A-slot group_points (×1);
+// other picks 0. total_points/current_rank set the final ranking directly.
+const P = (id: string, name: string, total: number, rank: number, gk: number, gs: number): PrizeRow => ({
+  user_id: id, full_name: name, total_points: total, giant_killer_points: gk, current_rank: rank,
+  picks: [{ slot: 'A', group_points: gs }, { slot: 'B', group_points: 0 }, { slot: 'C', group_points: 0 }, { slot: 'lucky', group_points: 0 }],
+})
+const prizeRows: PrizeRow[] = [
+  P('a', 'Alice', 200, 1, 10, 10), // best overall
+  P('b', 'Bob', 150, 2, 12, 40),   // best group-stage score
+  P('c', 'Cara', 140, 3, 95, 20),  // best giant-killer haul
+  P('d', 'Dan', 130, 4, 11, 5),    // weak group → big climber
+  P('e', 'Eve', 120, 5, 9, 15),
+  P('f', 'Finn', 10, 6, 1, 8),     // dead last
+]
+
+const prizes = computePrizes(prizeRows, { groupStageComplete: true, tournamentComplete: true })
+const byKey = Object.fromEntries(prizes.map(p => [p.key, p]))
+check('Overall Champion = Alice', byKey.overall.name, 'Alice')
+check('Group Stage Leader = Bob', byKey.group_leader.name, 'Bob')
+check('Giant Killer = Cara', byKey.giant_killer.name, 'Cara')
+check('Biggest Climber = Dan', byKey.climber.name, 'Dan')
+check('Wooden Spoon = Finn', byKey.wooden_spoon.name, 'Finn')
+check('Group Stage Leader status won', byKey.group_leader.status, 'won')
+// one prize per person: all four awarded names are distinct
+const awardedNames = prizes.map(p => p.name).filter(Boolean)
+check('all prize winners distinct', new Set(awardedNames).size, awardedNames.length)
+// pre-group-stage: group leader provisional, climber pending
+const early = computePrizes(prizeRows, { groupStageComplete: false, tournamentComplete: false })
+check('group leader leading before groups end', early.find(p => p.key === 'group_leader')?.status, 'leading')
+check('climber pending before groups end', early.find(p => p.key === 'climber')?.status, 'pending')
+
 console.log(failures === 0 ? '\n🎉 All checks passed' : `\n💥 ${failures} check(s) FAILED`)
 process.exit(failures === 0 ? 0 : 1)

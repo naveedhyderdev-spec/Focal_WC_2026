@@ -4,6 +4,8 @@ import NextUpdate from './NextUpdate'
 import DeadlineBanner from '@/components/DeadlineBanner'
 import MatchStrip, { type MatchLite } from './MatchStrip'
 import AutoRefresh from './AutoRefresh'
+import WinnerBoard from './WinnerBoard'
+import { computePrizes, type PrizeRow } from '@/lib/prizes'
 import { PICK_DEADLINE } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
@@ -27,10 +29,15 @@ export default async function LeaderboardPage() {
     supabase.from('matches')
       .select('fd_match_id, status, utc_date, home_team_code, away_team_code, home_score, away_score')
       .gte('utc_date', start).lt('utc_date', end).order('utc_date'),
-    supabase.from('teams').select('code, name'),
+    supabase.from('teams').select('code, name, stage_reached, is_champion'),
   ])
 
   const names = Object.fromEntries((teams ?? []).map(t => [t.code, t.name]))
+  // Tournament phase drives the Winner Board: group stage is over once any
+  // team has advanced past it; the tournament is over once a champion exists.
+  const groupStageComplete = (teams ?? []).some(t => t.stage_reached && t.stage_reached !== 'GROUP_STAGE')
+  const tournamentComplete = (teams ?? []).some(t => t.is_champion)
+  const prizes = computePrizes((rows ?? []) as PrizeRow[], { groupStageComplete, tournamentComplete })
   // LIVE = official kickoff has passed and we're inside the realistic match
   // window — same clock-based rule as the match strip (the feed's live
   // status is unreliable; FINISHED from the feed always ends it early).
@@ -57,6 +64,7 @@ export default async function LeaderboardPage() {
       <NextUpdate />
       <DeadlineBanner deadlineIso={PICK_DEADLINE.toISOString()} />
       <MatchStrip matches={(todayMatches ?? []) as MatchLite[]} names={names} />
+      {!error && <WinnerBoard prizes={prizes} />}
       {error ? (
         <p className="mt-12 text-center text-red-400">Could not load the leaderboard. Please refresh.</p>
       ) : (
