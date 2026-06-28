@@ -8,7 +8,7 @@ export default function WinnerBoard({ prizes }: { prizes: PrizeResult[] }) {
     <section className="mt-10">
       <h2 className="mb-1 text-center text-lg font-semibold text-white">Prizes &amp; Winners</h2>
       <p className="mb-5 text-center text-xs text-[#86868b]">
-        Five prizes · $1,000 pot · each shows its current leader · one cash prize per person, settled at the Final · hover ⓘ for how each is won
+        Five prizes · $1,000 pot · each prize goes to whoever tops it on merit · hover ⓘ for how each is won
       </p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {prizes.map(p => (

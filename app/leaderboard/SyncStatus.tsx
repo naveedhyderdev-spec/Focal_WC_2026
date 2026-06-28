@@ -43,7 +43,17 @@ export default function SyncStatus({
         <p>
           <span className="text-[#d2d2d7]">Last updated:</span> {clock(lastChangeAt)} ({ago(lastChangeAt)})
           {summary.length > 0 && (
-            <span className="text-[#86868b]"> · {summary.slice(0, 2).join(' · ')}{summary.length > 2 ? ` +${summary.length - 2} more` : ''}</span>
+            <span className="text-[#86868b]"> · {summary.slice(0, 2).join(' · ')}
+              {summary.length > 2 && (
+                <span className="group relative inline-block">
+                  {' '}<span className="cursor-help text-[#d2d2d7] underline decoration-dotted underline-offset-2">+{summary.length - 2} more</span>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 hidden w-72 max-w-[80vw] -translate-x-1/2 rounded-md border border-[#3a3a3d] bg-black px-3 py-2 text-left text-[11px] leading-relaxed text-[#d2d2d7] shadow-lg group-hover:block">
+                    <span className="mb-1 block font-semibold text-white">All updates in this sync:</span>
+                    {summary.map((s, i) => <span key={i} className="block">• {s}</span>)}
+                  </span>
+                </span>
+              )}
+            </span>
           )}
         </p>
       ) : (

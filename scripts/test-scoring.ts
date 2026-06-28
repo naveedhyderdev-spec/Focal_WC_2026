@@ -114,15 +114,14 @@ const prizeRows: PrizeRow[] = [
 
 const prizes = computePrizes(prizeRows, { groupStageComplete: true, tournamentComplete: true })
 const byKey = Object.fromEntries(prizes.map(p => [p.key, p]))
+// MERIT-BASED: each prize independently goes to whoever tops it.
+// Alice is #1 overall AND the biggest climber → she wins BOTH (allowed now).
 check('Overall Champion = Alice', byKey.overall.names, ['Alice'])
-check('Group Stage Leader = Bob', byKey.group_leader.names, ['Bob'])
-check('Giant Killer = Cara', byKey.giant_killer.names, ['Cara'])
-check('Biggest Climber = Dan', byKey.climber.names, ['Dan'])
-check('Wooden Spoon = Finn', byKey.wooden_spoon.names, ['Finn'])
+check('Group Stage Leader = Bob (highest group score)', byKey.group_leader.names, ['Bob'])
+check('Giant Killer = Cara (highest GK)', byKey.giant_killer.names, ['Cara'])
+check('Biggest Climber = Alice (merit; can win 2)', byKey.climber.names, ['Alice'])
+check('Wooden Spoon = Finn (last)', byKey.wooden_spoon.names, ['Finn'])
 check('Group Stage Leader status won', byKey.group_leader.status, 'won')
-// one prize per person: all awarded names are distinct
-const awardedNames = prizes.flatMap(p => p.names)
-check('all prize winners distinct', new Set(awardedNames).size, awardedNames.length)
 // pre-group-stage: group leader provisional, climber pending
 const early = computePrizes(prizeRows, { groupStageComplete: false, tournamentComplete: false })
 check('group leader leading before groups end', early.find(p => p.key === 'group_leader')?.status, 'leading')
@@ -136,21 +135,18 @@ const tieRows: PrizeRow[] = [
   P('t4', 'Wim', 5, 4, 1, 4),
 ]
 const tiePrizes = Object.fromEntries(computePrizes(tieRows, { groupStageComplete: true, tournamentComplete: true }).map(p => [p.key, p]))
+// Genuine tie WITHIN a prize still shows co-winners who split that prize.
 check('tied Overall Champions = Tara & Umar', tiePrizes.overall.names.slice().sort(), ['Tara', 'Umar'])
 check('tied overall reason mentions split', /split 2 ways/.test(tiePrizes.overall.reason), true)
-// one prize per person still holds AT THE FINAL: co-champions in no other prize
-const otherWinners = ['group_leader', 'giant_killer', 'climber', 'wooden_spoon'].flatMap(k => tiePrizes[k].names)
-check('co-champions excluded from other prizes (final)', otherWinners.includes('Tara') || otherWinners.includes('Umar'), false)
 
-// DURING the tournament (not final): no dedup — each prize shows its TRUE
-// leader, so the Group Stage Leader does NOT reshuffle when someone climbs
-// the overall table. (This is the FrankTheTank fix.)
+// MERIT: one person topping two prizes wins both — at the Final AND live,
+// identically (no reshuffle ever). This is the FrankTheTank fix.
 const multiRows = [P('z', 'Zoe', 200, 1, 50, 50), P('y', 'Yan', 100, 2, 10, 10)]
-const live = Object.fromEntries(computePrizes(multiRows, { groupStageComplete: true, tournamentComplete: false }).map(p => [p.key, p]))
-check('live: top player leads overall AND group stage (no live dedup)',
-  live.overall.names[0] === 'Zoe' && live.group_leader.names[0] === 'Zoe', true)
-const fin = Object.fromEntries(computePrizes(multiRows, { groupStageComplete: true, tournamentComplete: true }).map(p => [p.key, p]))
-check('final: dedup splits — Zoe overall, Yan group leader', fin.overall.names[0] === 'Zoe' && fin.group_leader.names[0] === 'Yan', true)
+for (const final of [false, true]) {
+  const r = Object.fromEntries(computePrizes(multiRows, { groupStageComplete: true, tournamentComplete: final }).map(p => [p.key, p]))
+  check(`merit (final=${final}): Zoe wins overall AND group stage`,
+    r.overall.names[0] === 'Zoe' && r.group_leader.names[0] === 'Zoe', true)
+}
 
 // ---------- 5. Change detection (Last-updated status) ----------
 import { detectChanges, type FdMatch as FM, type PrevMatch, type PrevTeam, type TeamStats } from '../lib/sync'

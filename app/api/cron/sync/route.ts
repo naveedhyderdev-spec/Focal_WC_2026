@@ -316,7 +316,7 @@ export async function GET(request: NextRequest) {
       const meta: Record<string, unknown> = { id: 1, last_run_at: nowIso, changed: didChange }
       if (didChange) {
         meta.last_change_at = nowIso
-        meta.summary = changeSummary.slice(0, 8)
+        meta.summary = changeSummary.slice(0, 40)  // keep the full picture for the hover list
       }
       await admin.from('sync_meta').upsert(meta, { onConflict: 'id' })
     } catch (e) {
@@ -328,7 +328,7 @@ export async function GET(request: NextRequest) {
       matches: matches.length,
       players_scored: scoreRows.length,
       changed: didChange,
-      changes: changeSummary.slice(0, 8),
+      changes: changeSummary,
     })
   } catch (e) {
     console.error('cron sync failed:', e)

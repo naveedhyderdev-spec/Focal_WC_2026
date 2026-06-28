@@ -101,21 +101,18 @@ export function computePrizes(
     }
   }
 
-  // "One prize per person" is a FINAL payout rule — applying it live makes the
-  // other prizes reshuffle every time the overall order moves (e.g. the Group
-  // Stage Leader appearing to "change" just because someone climbed the overall
-  // table). So during the tournament we show each prize's GENUINE leader
-  // independently; the dedup only runs once everything is final.
-  const useDedup = opts.tournamentComplete
-  const awarded = new Set<string>()
+  // MERIT-BASED (confirmed rule): each prize goes to whoever genuinely tops
+  // it — independently. The same person CAN win several titles; no
+  // redistribution. This keeps every prize stable: the Group Stage Leader
+  // never changes because someone else moved on the overall table. The only
+  // multi-name case is a GENUINE tie within a single prize (same metric value
+  // after tiebreakers), where the tied players are co-winners.
   const winners: Record<string, PrizeRow[]> = {}
-  for (const p of [...PRIZE_BOARD].sort((a, b) => b.amount - a.amount)) {
-    const pool = useDedup ? candidates[p.key].filter(r => !awarded.has(r.user_id)) : candidates[p.key]
+  for (const p of PRIZE_BOARD) {
+    const pool = candidates[p.key]
     if (pool.length === 0) { winners[p.key] = []; continue }
     const topKey = tieKey(p.key, pool[0])
-    const tied = pool.filter(r => tieKey(p.key, r) === topKey)
-    winners[p.key] = tied
-    if (useDedup) tied.forEach(r => awarded.add(r.user_id))
+    winners[p.key] = pool.filter(r => tieKey(p.key, r) === topKey)
   }
 
   const statusFor = (key: string): 'won' | 'leading' | 'pending' => {
