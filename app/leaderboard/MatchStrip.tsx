@@ -4,6 +4,7 @@ import Flag from '@/components/Flag'
 
 export interface MatchLite {
   fd_match_id: number
+  stage: string
   status: string
   utc_date: string | null
   home_team_code: string | null
@@ -11,6 +12,10 @@ export interface MatchLite {
   home_score: number | null
   away_score: number | null
 }
+
+// Knockout ties can run to extra time + penalties (~165 min); group games can't.
+const KNOCKOUT = new Set(['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'THIRD_PLACE', 'FINAL'])
+export const liveWindowMin = (stage: string) => (KNOCKOUT.has(stage) ? 170 : 130)
 
 // Today's fixtures above the leaderboard: LIVE with score, upcoming with
 // kickoff in the viewer's local time, finished with FT. Pure display.
@@ -36,8 +41,9 @@ export default function MatchStrip({
           // official kickoff time (always correct) within a realistic match
           // window; FINISHED from the feed always wins.
           const ko = m.utc_date ? new Date(m.utc_date).getTime() : null
-          const inWindow = ko !== null && Date.now() >= ko && Date.now() <= ko + 130 * 60_000
-          const done = m.status === 'FINISHED' || (ko !== null && Date.now() > ko + 130 * 60_000)
+          const capMs = liveWindowMin(m.stage) * 60_000
+          const inWindow = ko !== null && Date.now() >= ko && Date.now() <= ko + capMs
+          const done = m.status === 'FINISHED' || (ko !== null && Date.now() > ko + capMs)
           const live = !done && inWindow
           return (
             <div key={m.fd_match_id}

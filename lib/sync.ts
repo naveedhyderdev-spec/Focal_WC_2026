@@ -103,28 +103,26 @@ export function aggregateTeams(matches: FdMatch[], allCodes: string[]): Map<stri
     }
   }
 
-  // Elimination: a team is out when a LATER knockout stage has started/finished
-  // and the team does not appear at (or beyond) that stage.
-  const startedStages = new Set(
-    matches.filter(m => m.status === 'FINISHED' || m.status === 'IN_PLAY').map(m => m.stage),
-  )
-  const latestStarted = Math.max(0, ...[...startedStages].map(stageIdx))
-  const knockoutBegun = latestStarted > 0
+  // Elimination — POSITIVE PROOF ONLY, re-derived every run (never sticky).
+  // A team is out only if it actually LOST a finished knockout match, or it
+  // failed to qualify from its group once the R32 bracket is fully drawn.
+  // This never wrongly eliminates an advancing team whose next-round slot is
+  // still TBD/null in the feed (the cause of teams flashing "out").
+  const r32 = matches.filter(m => m.stage === 'LAST_32')
+  const r32FullyDrawn = r32.length >= 16 &&
+    r32.every(m => normalizeCode(m.homeTeam.tla) && normalizeCode(m.awayTeam.tla))
+  const knockoutLosers = new Set<string>()
+  for (const m of matches) {
+    if (m.stage === 'GROUP_STAGE' || m.status !== 'FINISHED') continue
+    const w = m.score.winner
+    if (!w || w === 'DRAW') continue // a finished knockout always has a decisive winner
+    const loser = w === 'HOME_TEAM' ? normalizeCode(m.awayTeam.tla) : normalizeCode(m.homeTeam.tla)
+    if (loser) knockoutLosers.add(loser)
+  }
   for (const t of stats.values()) {
-    if (knockoutBegun && stageIdx(t.stage_reached) < latestStarted) {
-      // every FINISHED match of the team's last stage must be done for them to be 'out';
-      // simple daily-cron approximation: later stage scheduled ⇒ earlier teams not in it are out
-      const lastStageMatches = matches.filter(
-        m => m.stage === t.stage_reached &&
-          (normalizeCode(m.homeTeam.tla) === t.code || normalizeCode(m.awayTeam.tla) === t.code),
-      )
-      if (lastStageMatches.every(m => m.status === 'FINISHED')) t.is_eliminated = true
-    }
-    // Loser of a finished Final is eliminated; winner is champion (and "alive")
-    if (t.stage_reached === 'FINAL') {
-      const final = matches.find(m => m.stage === 'FINAL')
-      if (final?.status === 'FINISHED' && !t.is_champion) t.is_eliminated = true
-    }
+    t.is_eliminated =
+      knockoutLosers.has(t.code) ||                          // lost a knockout tie
+      (r32FullyDrawn && stageIdx(t.stage_reached) === 0)     // never made the knockouts
   }
   return stats
 }
@@ -202,9 +200,11 @@ export function detectChanges(
     const prev = prevMatches.get(m.id)
     if (!prev) continue
     const hs = m.score.fullTime.home, as = m.score.fullTime.away
-    const scoreChanged = hs !== prev.home_score || as !== prev.away_score
+    // Only an INCREASE (a real goal) or full-time counts as a change — never a
+    // transient downward wobble (scores are ratcheted, but guard here too).
+    const scoreUp = (hs ?? -1) > (prev.home_score ?? -1) || (as ?? -1) > (prev.away_score ?? -1)
     const becameFinished = m.status === 'FINISHED' && prev.status !== 'FINISHED'
-    if ((scoreChanged || becameFinished) && hs !== null && as !== null) {
+    if ((scoreUp || becameFinished) && hs !== null && as !== null) {
       const label = `${nameOf(normalizeCode(m.homeTeam.tla))} ${hs}–${as} ${nameOf(normalizeCode(m.awayTeam.tla))}`
       out.push(becameFinished ? `${label} (full-time)` : `${label} (live)`)
     }

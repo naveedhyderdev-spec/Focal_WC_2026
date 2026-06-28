@@ -184,5 +184,27 @@ check('detectChanges: advance + champion',
   detectChanges([], new Map(), chgStats, prevT, nm),
   ['Ivory Coast reached Round of 32', 'Brazil won the World Cup! 🏆'])
 
+// ---------- 6. Robust elimination (positive proof, not sticky) ----------
+// 16 fully-drawn R32 ties (home wins each) → losers out, winners alive even
+// though no R16 match exists yet (the false-elimination fix).
+const elimMatches: FM[] = []
+for (let i = 0; i < 16; i++) elimMatches.push(m(200 + i, 'LAST_32', `T${2 * i + 1}`, `T${2 * i + 2}`, 2, 1))
+elimMatches.push(m(300, 'GROUP_STAGE', 'GX', 'GY', 1, 0)) // group-only teams
+const elimCodes = [...Array.from({ length: 32 }, (_, i) => `T${i + 1}`), 'GX', 'GY']
+const es = aggregateTeams(elimMatches, elimCodes)
+check('elim: R32 winner alive (next round still TBD)', es.get('T1')!.is_eliminated, false)
+check('elim: R32 loser eliminated', es.get('T2')!.is_eliminated, true)
+check('elim: group non-qualifier out once R32 fully drawn', es.get('GX')!.is_eliminated, true)
+
+// Before the R32 bracket is fully drawn, a group team is NOT prematurely out
+const partial = aggregateTeams([m(200, 'LAST_32', 'T1', 'T2', 2, 1), m(301, 'GROUP_STAGE', 'GZ', 'GW', 0, 0)], ['T1', 'T2', 'GZ', 'GW'])
+check('elim: group team safe before R32 fully drawn', partial.get('GZ')!.is_eliminated, false)
+
+// Champion: winner of a finished FINAL is champion + alive; loser eliminated
+const cs = aggregateTeams([m(400, 'FINAL', 'CH', 'RU', 1, 0)], ['CH', 'RU'])
+check('champion set', cs.get('CH')!.is_champion, true)
+check('champion not eliminated', cs.get('CH')!.is_eliminated, false)
+check('final loser eliminated', cs.get('RU')!.is_eliminated, true)
+
 console.log(failures === 0 ? '\n🎉 All checks passed' : `\n💥 ${failures} check(s) FAILED`)
 process.exit(failures === 0 ? 0 : 1)

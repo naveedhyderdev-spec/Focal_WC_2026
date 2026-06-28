@@ -142,18 +142,25 @@ export async function GET(request: NextRequest) {
     matches = matches.map(m => {
       const prev = existing.get(m.id)
       if (!prev) return m
-      let status = m.status
-      let home = m.score.fullTime.home
-      let away = m.score.fullTime.away
-      let winner = m.score.winner ?? null
-      // status regression → keep our last-known status + score
-      if ((RANK[m.status] ?? 0) < (RANK[prev.status] ?? 0)) {
-        status = prev.status; home = prev.home_score; away = prev.away_score; winner = prev.winner
-      } else if (home === null && away === null && prev.home_score !== null && prev.away_score !== null) {
-        // status held/advanced but score went missing → keep last-known score
-        home = prev.home_score; away = prev.away_score
-        winner = status === 'FINISHED' ? (home! > away! ? 'HOME_TEAM' : away! > home! ? 'AWAY_TEAM' : 'DRAW') : prev.winner
-      }
+      // Status never regresses (a finished/live match can't go back to scheduled).
+      const status = (RANK[m.status] ?? 0) < (RANK[prev.status] ?? 0) ? prev.status : m.status
+
+      // Score never goes BACKWARDS. The live feed (and the ESPN overlay, which
+      // turns a missing score into 0) can momentarily report a lower/null
+      // score mid-match — that caused the live score to flicker (2–0 → 1–0 →
+      // 2–0). Keep the highest known value per side; keep last-known if null.
+      const ratchet = (cur: number | null, old: number | null) =>
+        cur === null ? old : old === null ? cur : Math.max(cur, old)
+      const home = ratchet(m.score.fullTime.home, prev.home_score)
+      const away = ratchet(m.score.fullTime.away, prev.away_score)
+
+      // Winner is DERIVED from the score for any finished match (the feed
+      // sometimes leaves winner null even with a decisive score — which would
+      // corrupt champion/elimination on the Final). Live matches: no winner.
+      const winner = status === 'FINISHED' && home !== null && away !== null
+        ? (home > away ? 'HOME_TEAM' : away > home ? 'AWAY_TEAM' : 'DRAW')
+        : (m.score.winner ?? prev.winner ?? null)
+
       // NEVER overwrite a known knockout-bracket team with null. The live feed
       // intermittently drops the R32+ team names (showing them as TBD/null),
       // which was wiping the bracket and flickering the leaderboard.
@@ -205,14 +212,15 @@ export async function GET(request: NextRequest) {
     }))
     const stats = aggregateTeams(matchesForAgg, ourTeams.map(t => t.code))
 
-    // Per-team NO-REGRESSION guard — the final safety net. Read current team
-    // rows and never let a stat go BACKWARDS: cumulative counts only rise,
-    // stage only advances, eliminated/champion are sticky, group_position is
-    // kept if standings degrade. So even if a feed glitch slips through every
-    // earlier guard, scores and stages can only ever move forward. This (with
-    // the match-table guards above) is what stops the leaderboard flicker.
+    // Per-team NO-REGRESSION guard — final safety net. The matches table is
+    // now fully ratcheted (scores never drop, codes never null), so the
+    // aggregate is already stable; these clamps are belt-and-suspenders.
+    // Cumulative counts only rise; stage only advances; champion is sticky.
+    // is_eliminated is NOT sticky — it's re-derived from positive proof each
+    // run (a team that advances after its slot fills must be able to recover
+    // from a transient "out"). group_position kept if standings degrade.
     const { data: existingTeams } = await admin.from('teams').select(
-      'code, goals_for, goals_against, games_played, won, draw, lost, group_points, stage_reached, is_eliminated, is_champion, group_position')
+      'code, goals_for, goals_against, games_played, won, draw, lost, group_points, stage_reached, is_champion, group_position')
     const existing2 = new Map((existingTeams ?? []).map(t => [t.code, t]))
     for (const t of stats.values()) {
       const p = existing2.get(t.code)
@@ -226,7 +234,6 @@ export async function GET(request: NextRequest) {
       t.group_points = Math.max(t.group_points, p.group_points ?? 0)
       if (p.stage_reached && stageIndex(p.stage_reached) > stageIndex(t.stage_reached))
         t.stage_reached = p.stage_reached
-      t.is_eliminated = t.is_eliminated || !!p.is_eliminated
       t.is_champion = t.is_champion || !!p.is_champion
     }
 

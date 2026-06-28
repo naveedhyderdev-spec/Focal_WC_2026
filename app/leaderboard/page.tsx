@@ -2,7 +2,7 @@ import { createServerComponentClient } from '@/lib/supabase/server'
 import LeaderboardTable, { type LeaderboardRow } from './LeaderboardTable'
 import SyncStatus from './SyncStatus'
 import DeadlineBanner from '@/components/DeadlineBanner'
-import MatchStrip, { type MatchLite } from './MatchStrip'
+import MatchStrip, { liveWindowMin, type MatchLite } from './MatchStrip'
 import AutoRefresh from './AutoRefresh'
 import WinnerBoard from './WinnerBoard'
 import { computePrizes, type PrizeRow } from '@/lib/prizes'
@@ -27,7 +27,7 @@ export default async function LeaderboardPage() {
     supabase.auth.getUser(),
     supabase.rpc('get_leaderboard'),
     supabase.from('matches')
-      .select('fd_match_id, status, utc_date, home_team_code, away_team_code, home_score, away_score')
+      .select('fd_match_id, stage, status, utc_date, home_team_code, away_team_code, home_score, away_score')
       .gte('utc_date', start).lt('utc_date', end).order('utc_date'),
     supabase.from('teams').select('code, name, stage_reached, is_champion'),
     // sync status — graceful if the table isn't migrated yet
@@ -49,7 +49,7 @@ export default async function LeaderboardPage() {
     .filter(m => {
       if (m.status === 'FINISHED' || !m.utc_date) return false
       const ko = new Date(m.utc_date).getTime()
-      return now >= ko && now <= ko + 130 * 60_000
+      return now >= ko && now <= ko + liveWindowMin(m.stage) * 60_000
     })
     .flatMap(m => [m.home_team_code, m.away_team_code])
     .filter((c): c is string => !!c)
