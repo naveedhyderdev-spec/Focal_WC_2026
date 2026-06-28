@@ -101,17 +101,21 @@ export function computePrizes(
     }
   }
 
-  // one prize per person — assign largest amount first; a genuine tie at the
-  // top of a prize makes ALL tied players co-winners (they split it).
+  // "One prize per person" is a FINAL payout rule — applying it live makes the
+  // other prizes reshuffle every time the overall order moves (e.g. the Group
+  // Stage Leader appearing to "change" just because someone climbed the overall
+  // table). So during the tournament we show each prize's GENUINE leader
+  // independently; the dedup only runs once everything is final.
+  const useDedup = opts.tournamentComplete
   const awarded = new Set<string>()
   const winners: Record<string, PrizeRow[]> = {}
   for (const p of [...PRIZE_BOARD].sort((a, b) => b.amount - a.amount)) {
-    const pool = candidates[p.key].filter(r => !awarded.has(r.user_id))
+    const pool = useDedup ? candidates[p.key].filter(r => !awarded.has(r.user_id)) : candidates[p.key]
     if (pool.length === 0) { winners[p.key] = []; continue }
     const topKey = tieKey(p.key, pool[0])
     const tied = pool.filter(r => tieKey(p.key, r) === topKey)
     winners[p.key] = tied
-    tied.forEach(r => awarded.add(r.user_id))
+    if (useDedup) tied.forEach(r => awarded.add(r.user_id))
   }
 
   const statusFor = (key: string): 'won' | 'leading' | 'pending' => {

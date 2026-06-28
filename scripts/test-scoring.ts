@@ -138,9 +138,19 @@ const tieRows: PrizeRow[] = [
 const tiePrizes = Object.fromEntries(computePrizes(tieRows, { groupStageComplete: true, tournamentComplete: true }).map(p => [p.key, p]))
 check('tied Overall Champions = Tara & Umar', tiePrizes.overall.names.slice().sort(), ['Tara', 'Umar'])
 check('tied overall reason mentions split', /split 2 ways/.test(tiePrizes.overall.reason), true)
-// one prize per person still holds: the two co-champions appear in no other prize
+// one prize per person still holds AT THE FINAL: co-champions in no other prize
 const otherWinners = ['group_leader', 'giant_killer', 'climber', 'wooden_spoon'].flatMap(k => tiePrizes[k].names)
-check('co-champions excluded from other prizes', otherWinners.includes('Tara') || otherWinners.includes('Umar'), false)
+check('co-champions excluded from other prizes (final)', otherWinners.includes('Tara') || otherWinners.includes('Umar'), false)
+
+// DURING the tournament (not final): no dedup — each prize shows its TRUE
+// leader, so the Group Stage Leader does NOT reshuffle when someone climbs
+// the overall table. (This is the FrankTheTank fix.)
+const multiRows = [P('z', 'Zoe', 200, 1, 50, 50), P('y', 'Yan', 100, 2, 10, 10)]
+const live = Object.fromEntries(computePrizes(multiRows, { groupStageComplete: true, tournamentComplete: false }).map(p => [p.key, p]))
+check('live: top player leads overall AND group stage (no live dedup)',
+  live.overall.names[0] === 'Zoe' && live.group_leader.names[0] === 'Zoe', true)
+const fin = Object.fromEntries(computePrizes(multiRows, { groupStageComplete: true, tournamentComplete: true }).map(p => [p.key, p]))
+check('final: dedup splits — Zoe overall, Yan group leader', fin.overall.names[0] === 'Zoe' && fin.group_leader.names[0] === 'Yan', true)
 
 // ---------- 5. Change detection (Last-updated status) ----------
 import { detectChanges, type FdMatch as FM, type PrevMatch, type PrevTeam, type TeamStats } from '../lib/sync'

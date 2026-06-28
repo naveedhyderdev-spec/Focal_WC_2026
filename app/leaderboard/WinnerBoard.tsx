@@ -8,7 +8,7 @@ export default function WinnerBoard({ prizes }: { prizes: PrizeResult[] }) {
     <section className="mt-10">
       <h2 className="mb-1 text-center text-lg font-semibold text-white">Prizes &amp; Winners</h2>
       <p className="mb-5 text-center text-xs text-[#86868b]">
-        Five prizes · $1,000 pot · one prize per person · hover the ⓘ to see how each is won
+        Five prizes · $1,000 pot · each shows its current leader · one cash prize per person, settled at the Final · hover ⓘ for how each is won
       </p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {prizes.map(p => (
@@ -32,9 +32,12 @@ export default function WinnerBoard({ prizes }: { prizes: PrizeResult[] }) {
               {p.status !== 'pending' && p.names.length > 0 ? (
                 <>
                   <div className="flex items-start gap-2">
-                    {p.status === 'won'
-                      ? <><span className="text-lg leading-tight">🏆</span><span className="font-heading text-base font-semibold leading-tight text-white">{p.names.join(' & ')}</span></>
-                      : <span className="text-sm text-[#d2d2d7]"><span className="text-[#86868b]">Leading:</span> {p.names.join(' & ')}</span>}
+                    {(() => {
+                      const shown = p.names.slice(0, 3).join(' & ') + (p.names.length > 3 ? ` +${p.names.length - 3} more` : '')
+                      return p.status === 'won'
+                        ? <><span className="text-lg leading-tight">🏆</span><span className="font-heading text-base font-semibold leading-tight text-white">{shown}</span></>
+                        : <span className="text-sm text-[#d2d2d7]"><span className="text-[#86868b]">Leading:</span> {shown}</span>
+                    })()}
                   </div>
                   <div className="mt-1 text-xs text-[#86868b]">
                     {p.reason}{p.status === 'leading' && ' · provisional'}
