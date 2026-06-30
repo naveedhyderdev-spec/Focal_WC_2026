@@ -1,6 +1,7 @@
 'use client'
 
 import Flag from '@/components/Flag'
+import { liveWindowMin } from '@/lib/matchWindow'
 
 export interface MatchLite {
   fd_match_id: number
@@ -12,10 +13,6 @@ export interface MatchLite {
   home_score: number | null
   away_score: number | null
 }
-
-// Knockout ties can run to extra time + penalties (~165 min); group games can't.
-const KNOCKOUT = new Set(['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'THIRD_PLACE', 'FINAL'])
-export const liveWindowMin = (stage: string) => (KNOCKOUT.has(stage) ? 170 : 130)
 
 // Today's fixtures above the leaderboard: LIVE with score, upcoming with
 // kickoff in the viewer's local time, finished with FT. Pure display.
