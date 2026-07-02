@@ -200,6 +200,14 @@ check('elim: group non-qualifier out once R32 fully drawn', es.get('GX')!.is_eli
 const partial = aggregateTeams([m(200, 'LAST_32', 'T1', 'T2', 2, 1), m(301, 'GROUP_STAGE', 'GZ', 'GW', 0, 0)], ['T1', 'T2', 'GZ', 'GW'])
 check('elim: group team safe before R32 fully drawn', partial.get('GZ')!.is_eliminated, false)
 
+// Winner-advancement: a team that WINS a knockout tie has reached the next
+// round even before the feed draws that fixture (the Mexico "stuck on R32" fix).
+const adv = aggregateTeams([m(500, 'LAST_32', 'MEX', 'ECU', 2, 0)], ['MEX', 'ECU'])
+check('winner of R32 reached R16 (next fixture not drawn yet)', adv.get('MEX')!.stage_reached, 'LAST_16')
+check('loser of R32 stays at R32', adv.get('ECU')!.stage_reached, 'LAST_32')
+check('R32 winner alive', adv.get('MEX')!.is_eliminated, false)
+check('R32 loser eliminated', adv.get('ECU')!.is_eliminated, true)
+
 // Champion: winner of a finished FINAL is champion + alive; loser eliminated
 const cs = aggregateTeams([m(400, 'FINAL', 'CH', 'RU', 1, 0)], ['CH', 'RU'])
 check('champion set', cs.get('CH')!.is_champion, true)

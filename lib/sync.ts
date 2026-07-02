@@ -35,6 +35,12 @@ export interface TeamStats {
 }
 
 const STAGE_ORDER = ['GROUP_STAGE', 'LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL']
+// Winning a match at stage X means you've reached the next round. (THIRD_PLACE
+// and FINAL are excluded — the Final winner becomes champion, not "next round".)
+const NEXT_ROUND: Record<string, string> = {
+  LAST_32: 'LAST_16', LAST_16: 'QUARTER_FINALS',
+  QUARTER_FINALS: 'SEMI_FINALS', SEMI_FINALS: 'FINAL',
+}
 
 export function normalizeCode(tla: string | null | undefined): string | null {
   if (!tla) return null
@@ -93,6 +99,16 @@ export function aggregateTeams(matches: FdMatch[], allCodes: string[]): Map<stri
         else if (as < hs) at.lost++
         else { at.draw++; if (isGroup) at.group_points += GROUP_DRAW }
       }
+    }
+
+    // Winning a knockout tie means you've REACHED the next round — even before
+    // the feed draws that next fixture (the free feed lags in populating the
+    // bracket, which was why e.g. Mexico stayed on "Round of 32" after winning).
+    if (m.status === 'FINISHED' && m.score.winner && m.score.winner !== 'DRAW') {
+      const winnerCode = m.score.winner === 'HOME_TEAM' ? home : away
+      const next = NEXT_ROUND[m.stage]
+      const wt = winnerCode ? stats.get(winnerCode) : undefined
+      if (wt && next && stageIdx(next) > stageIdx(wt.stage_reached)) wt.stage_reached = next
     }
 
     // Champion = winner of the finished Final (knockouts have no DRAW winner)
